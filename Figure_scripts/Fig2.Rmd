@@ -1,0 +1,167 @@
+---
+title: "Fig2"
+author: "Lyu"
+date: "7/18/2022"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(scales)
+```
+
+```{r polyA length Fig2a}
+polyA_length <- read.csv('Hela polyA length.csv')
+
+p <- polyA_length%>%ggplot(aes(x=length))+
+  geom_density(size=0.25)+
+  geom_vline(xintercept = median(polyA_length$length),size=0.25,color='red')+
+  #geom_vline(xintercept = 24,color='red',size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7)
+    )+
+  xlim(0,250)+
+  #annotate(geom="text",x=0.1, y=1.5, label="p=0.00086",size=2)+
+  ylab('Density')+
+  xlab("PolyA length (nt)")
+ggsave(filename = "polyA length.pdf",plot = p,width=75,height =25,units = "mm", dpi = 300)
+```
+
+```{r LAST-seq vs SMART-seq on DIY Fig 2d}
+
+LAST_ERCC <- read.table("./input/LAST_ERCC_smooth.csv",sep = ",")
+colnames(LAST_ERCC) <- c("copy_number","detection_rate")
+LAST_ERCC$type <- rep("LAST_ERCC",26)
+
+SMART_ERCC <- read.table("./input/SMART_ERCC_smooth.csv",sep = ",")
+colnames(SMART_ERCC) <- c("copy_number","detection_rate")
+SMART_ERCC$type <- rep("SMART_ERCC",26)
+
+LAST_DIY <- read.table("./input/LAST_DIY_smooth.csv",sep = ",")
+colnames(LAST_DIY) <- c("copy_number","detection_rate")
+LAST_DIY$type <- rep("LAST_DIY",16)
+
+SMART_DIY <- read.table("./input/SMART_DIY_smooth.csv",sep = ",")
+colnames(SMART_DIY) <- c("copy_number","detection_rate")
+SMART_DIY$type <- rep("SMART_DIY",16)
+
+megsmart_last <- rbind(LAST_DIY,SMART_DIY)
+
+p <- megsmart_last%>%ggplot(aes(x=copy_number,y=detection_rate,color=type))+
+  geom_smooth(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.8, 0.2),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  xlab("spike-ins copy#")+
+  ylab("detection rate of spike-in_A60")+
+  scale_color_discrete(labels=c("LASTseq","SMARTseq"))
+
+ggsave(filename = "LAST_SMART_DIY_CP.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+```{r LAST-seq vs CEL-seq2 A60 Fig2e}
+#ERCC and DIY
+ERCC <- read.csv('./input/ERCC.csv',header = F)
+colnames(ERCC) <- c('ID','mnum')
+DIY <- read.csv('./input/ERCCSMM.csv',header = F)
+colnames(DIY) <- c('ID','mnum')
+
+#cel-seq
+celsserccall <- celss[grepl('^ERCC-',rownames(celss)),]
+celssercc <-as.data.frame(celsserccall[,c(1,6:8,10)]) 
+celssercc$celmean <- rowSums(celssercc)/5
+celssercc$ID <- rownames(celssercc)
+
+celsssm <-as.data.frame(celsserccall[,-c(1,6:8,10)]) 
+celsssm$celmean <- rowSums(celsssm)/5
+celsssm$ID <- rownames(celsssm)
+
+#last-seq
+lastercc <-as.data.frame(last_UMI_1M_1A[grepl('^ERCC-',rownames(last_UMI_1M_1A)),]) 
+lastercc$lastmean <- rowSums(lastercc)/10
+lastercc$ID <- rownames(lastercc)
+
+lastsm <-as.data.frame(last_UMI_1M_2A[grepl('^ERCC-',rownames(last_UMI_1M_2A)),]) 
+lastsm$lastmean <- rowSums(lastsm)/10
+lastsm$ID <- rownames(lastsm)
+
+
+cel_last_DIY <- full_join(celsssm,lastsm,by='ID')
+cel_last_DIY <- inner_join(cel_last_DIY,DIY,by='ID')
+cel_last_DIYf <- cel_last_DIY%>%
+  filter(mnum > 50)
+
+p <- cel_last_DIYf %>%
+  ggplot(aes(x=mnum))+
+  scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  #geom_point(aes(y=log(CATTGG)))+
+  stat_smooth(aes(y=lastmean),method="lm", se=F,formula = y~1+offset(x), color= "#F8766D",size=0.25)+
+  #geom_point(aes(y=CATTGG), color = "#F8766D",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=CGAAGA), color = "#F8766D",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=TTGCTG), color = "#F8766D",alpha=0.5,size=0.25)+
+  geom_point(aes(y=lastmean), color = "#F8766D",size=0.25)+
+  stat_smooth(aes(y=celmean),method="lm", se=F,formula = y~1+offset(x), color= "#00BFC4",size=0.25)+
+  #geom_point(aes(y=CATGAG), color = "#00BFC4",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=AGCTTC), color = "#00BFC4",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=CAGATC), color = "#00BFC4",alpha=0.5,size=0.25)+
+  geom_point(aes(y=celmean), color = "#00BFC4",size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.2, 0.8),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  #change x and y labels
+  xlab("Spike-in_transcripts")+  
+  ylab("UMI#")
+
+ggsave(filename = "LAST_CEL_CP_DIY.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+#linear model, set slope=1 for CP calculation
+linea <- lm(formula = log10(lastmean)~1+offset(log10(mnum)), data = cel_last_DIYf)
+print(linea)
+CP <- 10^-0.7
+
+linea <- lm(formula = log10(celmean)~1+offset(log10(mnum)), data = cel_last_DIYf)
+print(linea)
+CP <- 10^-1.1
+```
+

@@ -1,0 +1,192 @@
+---
+title: "Supplementary figure 8"
+author: "Lyu"
+date: "7/20/2022"
+output: html_document
+---
+
+```{r differentially expressed genes SF7c}
+dff <- readRDS('./input/SCC4_vs_WT_DGE.rds')
+
+#random sample 2000 genes for plotting
+RN <- nrow(dff)
+RS <- sample (RN, size=2000, replace =F)
+dffR <- dff[RS,]
+
+cols <- c("up" = "#ffad73", "down" = "#26b3ff", "ns" = "grey") 
+p <- ggplot(data=dffR,aes(x = MeanLog2FC,
+                    y = ProbDiffMean,
+                    color = gene_type)) + 
+  geom_point(size=0.1)+
+  geom_vline(xintercept = c(log2(1/2), log2(2)),
+             linetype = "dashed",size=0.25) +
+  scale_colour_manual(values = cols)+ # Modify point colour
+  xlim(-6, 6)+
+  theme_man+
+  theme(legend.position = c(0.9, 0.2),
+                 legend.key.size = unit(0.1, "cm"),
+                 legend.key.width = unit(0.1, "cm"),
+                 legend.text = element_text(size=6))+
+  labs(color = " ")+
+  guides(colour = guide_legend(override.aes = list(size=1)))+
+  annotate("text", x = -4, y = 0.8,
+           label = "4.2%", color = "firebrick",size=2)+
+  guides(colour = guide_legend(override.aes = list(size=1)))+
+  annotate("text", x = 4, y = 0.8,
+           label = "5.7%", color = "firebrick",size=2)
+ggsave(filename = "SCC4_vs_WT_DGE.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+########gene having difference in expression noise rather than expression level
+disperF <- readRDS('./input/SCC4_vs_WT_dispersion.rds')
+
+p <- ggplot(data=disperF,aes(x = DispLog2FC,
+                        y = ProbDiffDisp,
+                        color = gene_type)) + 
+  geom_point(size=0.1)+
+  geom_vline(xintercept = c(log2(1/2), log2(2)),
+             linetype = "dashed",size=0.25) +
+  scale_colour_manual(values = cols)+ # Modify point colour
+  xlim(-10, 10)+
+  theme_man+
+  theme(legend.position = c(0.9, 0.2),
+        legend.key.size = unit(0.1, "cm"),
+        legend.key.width = unit(0.1, "cm"),
+        legend.text = element_text(size=6))+
+  labs(color = " ")+
+  #change legend size
+  guides(colour = guide_legend(override.aes = list(size=1)))+
+  annotate("text", x = -8, y = 0.8,
+           label = "4.1%", color = "firebrick",size=2)+
+  guides(colour = guide_legend(override.aes = list(size=1)))+
+  annotate("text", x = 8, y = 0.8,
+           label = "4.2%", color = "firebrick",size=2)
+ggsave(filename = "SCC4_vs_WT_noise.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+
+##########not included
+```{r sizeCV WT/SCC }
+
+#wt
+megRAND_TAD_size_wt <- readRDS('./input/WT_fsizeCV_TADvsBoundaryvsControl.rds')
+my_comparisons <- list( c("TAD", "RANDOM"), c("RANDOM", "TADboundary") )
+p <- megRAND_TAD_size_wt %>% ggplot(aes(x=type,y=sizeCV,color=type))+
+  geom_boxplot(lwd=0.25,outlier.colour = NA, width=0.75, fatten=1)+
+  stat_summary(fun=mean, geom="point", shape=20, size=4, color="red", fill="red") +#plot mean
+  stat_compare_means(comparisons =my_comparisons,size=2)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    legend.position='none',
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab("")+
+  ylab("SizeCV")
+ggsave(filename = "SizeCV_wt.pdf",plot = p,width=60,height = 45,units = "mm", dpi = 300)
+
+#scc4-/-
+megRAND_TAD_size_scc <- readRDS('./input/SCC_fsizeCV_TADvsBoundaryvsControl.rds')
+my_comparisons <- list( c("TAD", "RANDOM"), c("RANDOM", "TADboundary") )
+p <- megRAND_TAD_size_scc %>% ggplot(aes(x=type,y=sizeCV,color=type))+
+  geom_boxplot(lwd=0.25,outlier.colour = NA, width=0.75, fatten=1)+
+  stat_summary(fun=mean, geom="point", shape=20, size=4, color="red", fill="red") +
+  stat_compare_means(comparisons =my_comparisons,size=2)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    legend.position='none',
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab("")+
+  ylab("SizeCV")
+ggsave(filename = "SizeCV_scc.pdf",plot = p,width=60,height = 45,units = "mm", dpi = 300)
+
+```
+
+
+
+```{r genes differing in bursting frequency and bursting size }
+#SCC4-/- frequency
+##########################################################################################
+df_bs_extr_sub_f <- readRDS('./input/SSC4_vs_WT_frequency.rds')
+
+p <- ggplot(data=df_bs_extr_sub_f,aes(x = logsccvswt_f,
+                                 y = -log10(bf_pvalue),
+                                 color = gene_type)) + 
+  geom_point(size=0.1)+
+  geom_hline(yintercept = -log10(0.05),
+             linetype = "dashed",size=0.25) + 
+  geom_vline(xintercept = c(log2(1/2), log2(2)),
+             linetype = "dashed",size=0.25) +
+  scale_colour_manual(values = cols)+ # Modify point colour
+  xlim(-3, 3)+
+  theme_man+
+  theme(legend.position = c(0.9, 0.2),
+        legend.key.size = unit(0.1, "cm"),
+        legend.key.width = unit(0.1, "cm"),
+        legend.text = element_text(size=6))+ 
+  #change x and y labels
+  xlab("fold_change(log2)")+  
+  ylab("bursting frequency p-value(-log10)")+ 
+  #remove lengend title
+  labs(color = " ")+
+  #change legend size
+  guides(colour = guide_legend(override.aes = list(size=1)))+
+  annotate("text", x = -2, y = 8,
+           label = "12.5%", color = "firebrick",size=2)+
+  guides(colour = guide_legend(override.aes = list(size=1)))+
+  annotate("text", x = 2, y = 8,
+           label = "5.3%", color = "firebrick",size=2)
+
+ggsave(filename = "SCC4_vs_WT_frequency.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+#SCC4-/- size
+##########################################################################################
+df_bs_extr_sub_s <- readRDS('./input/SCC4_vs_WT_size.rds')
+p <- ggplot(data=df_bs_extr_sub_s,aes(x = logsccvswt_s,
+                                 y = -log10(bs_pvalue),
+                                 color = gene_type)) + 
+  geom_point(size=0.1)+
+  geom_hline(yintercept = -log10(0.05),
+             linetype = "dashed",size=0.25) + 
+  geom_vline(xintercept = c(log2(1/2), log2(2)),
+             linetype = "dashed",size=0.25) +
+  scale_colour_manual(values = cols)+ # Modify point colour
+  #xlim(-4, 4)+
+  theme_man+
+  theme(legend.position = c(0.9, 0.2),
+        legend.key.size = unit(0.1, "cm"),
+        legend.key.width = unit(0.1, "cm"),
+        legend.text = element_text(size=6))+ 
+  #change x and y labels
+  xlab("fold_change(log2)")+  
+  ylab("bursting size p-value(log10)")+ 
+  #remove lengend title
+  labs(color = " ")+
+  #change legend size
+  guides(colour = guide_legend(override.aes = list(size=1)))+
+  annotate("text", x = -2, y = 8,
+           label = "7.5%", color = "firebrick",size=2)+
+  guides(colour = guide_legend(override.aes = list(size=1)))+
+  annotate("text", x = 2, y = 8,
+           label = "19.1%", color = "firebrick",size=2)
+ggsave(filename = "SCC4_vs_WT_size.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+

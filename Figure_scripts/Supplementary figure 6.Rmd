@@ -1,0 +1,99 @@
+---
+title: "Supplementary figure 7"
+author: "Lyu"
+date: "7/19/2022"
+output: html_document
+---
+```{r genes passing two-state bursting model SF 6f}
+mean_cv_wt_filtering <- readRDS('./input/mean_cv_wt_filtering.rds')
+
+#random sample 2000 genes for plotting
+RN <- nrow(mean_cv_wt_filtering)
+RS <- sample (RN, size=2000, replace =F)
+mean_cv_wt_filteringR <- mean_cv_wt_filtering[RS,]
+
+p <- mean_cv_wt_filteringR %>% ggplot(aes(x=log2(countmean),y=log2(countCV),color=type))+
+  geom_point(size=0.1)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=14))+
+  scale_color_manual(values=c("grey", "red"))+
+  theme(legend.position = c(0.9, 0.9),
+        legend.key.size = unit(0.1, "cm"),
+        legend.key.width = unit(0.1, "cm"),
+        legend.text = element_text(size=10))+
+  xlab("Expression level(log2)")+  
+  ylab("Expression noise(log2)")
+ggsave(filename = "Keep_vs_discard.pdf",plot = p,width=90/2,height = 90/2,units = "mm", dpi = 300)
+```
+
+
+
+```{r size vs noise SF 6b}
+p <- noise_FSOR %>% ggplot(aes(x=log2(countCV),y=log2(B_size)))+
+  geom_point(size=0.1,color='black')+
+  #geom_smooth(method = "loess",color="red",se = FALSE,size=0.25)+
+  theme_man+
+  annotate(geom="text",x=1, y=6, label="Spearman r=-0.54",size=2)+
+  #change x and y labels
+  xlab("Bursting size(log2))")+  
+  ylab("expression noise(log2)")
+ggsave(filename = "noise_size.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+cor(x=log2(noise_FSO$countCV),y=log2(noise_FSO$B_size),method = 'spearman')
+```
+
+```{r Koff vs noise SF 6c}
+p <- noise_FSOR %>% ggplot(aes(x=log2(countCV),y=log2(koff)))+
+  geom_point(size=0.1,color='black')+
+  #geom_smooth(method = "loess",color="red",se = FALSE,size=0.25)+
+  theme_man+
+  annotate(geom="text",x=2, y=10, label="Spearman r=-0.59",size=2)+ 
+  #change x and y labels
+  xlab("Koff(log2)")+  
+  ylab("expression noise(log2)")
+ggsave(filename = "noise_Koff.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+cor(x=log2(noise_FSO$countCV),y=log2(noise_FSO$koff),method = 'spearman')
+```
+
+```{r frequency vs size SF 6d}
+p <- bf_bs_eR %>% ggplot(aes(x=logs,y=logf))+
+  geom_point(size=0.1)+
+  theme_man+
+  annotate(geom="text",x=1.5, y=-1, label="Spearman r=0.46",size=2)+
+  #change x and y labels
+  xlab("Burst size(log10)")+  
+  ylab("Burst frequency(log10)")
+ggsave(filename = "frequency_size.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)  
+cor(bf_bs_e$logf,bf_bs_e$logs,method = 'spearman')
+```
+
+```{r Koff vs Kon SF 6a}
+#Kon and Koff
+#################################################################################################################
+K_off_on <- readRDS('./input/K_off_on.rds')
+
+#random sample 2000 genes for plotting
+RN <- nrow(K_off_on)
+RS <- sample (RN, size=2000, replace =F)
+K_off_onR <- K_off_on[RS,]
+
+p <- K_off_onR %>% ggplot(aes(x=logoff,y=logon))+
+  geom_point(size=0.1)+
+  geom_abline(slope = 1,intercept = 0,color="red")+
+  theme_man+
+  #change x and y labels
+  xlab("Koff(log10)")+  
+  ylab("Kon(log10)")
+ggsave(filename = "Kon_vs_Koff.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+

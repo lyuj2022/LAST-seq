@@ -1,0 +1,251 @@
+---
+title: "Fig4"
+author: "Lyu"
+date: "7/19/2022"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(scales)
+```
+
+```{r noise vs mean Fig4c}
+mean_cv_wt <- readRDS('./input/mean_cv_wt.rds')
+
+mean_cv_wtf <-  mean_cv_wt %>% 
+  filter(countmean > 0.1)
+
+#random sample 2000 genes for plotting
+RN <- nrow(mean_cv_wtf)
+RS <- sample (RN, size=2000, replace =F)
+mean_cv_wtfR <- mean_cv_wtf[RS,]
+
+p <- mean_cv_wtfR %>% ggplot(aes(x=log2(countmean)))+
+  geom_point(aes(y=log2(countCV)),size=0.1)+
+  #geom_point(aes(y=log2(modelnoise)),size=0.1,color="red")+
+  geom_point(aes(y=log2(modelnoise)),size=0.1,color="red",alpha=1/10)+
+  #geom_point(aes(y=log2(modelnoisepoisson)),size=0.1,color="blue")+
+  #stat_smooth(aes(y=logUMI),method="lm", se=FALSE,formula = y~1+offset(x),color ="red")+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  #annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  #annotate(geom="text",x=5.5, y=-2, label="techincal noise(modeled)",size=2)+
+  #change x and y labels
+  xlab("Expression level(log2)")+  
+  ylab("Expression noise(log2)")+
+  ylim(-1.5, 4)
+ggsave(filename = "noise_vs_technialnoise.pdf",plot = p,width=90/2,height = 90/2,units = "mm", dpi = 300)
+```
+
+```{r samples for model fitting Fig4e }
+library(scModels)
+#plot counts distribution, fit distribution with poisson-beta distribution
+
+#good exmaple ENSG00000172262.11, ZNF131
+alpha=Kon,beta=Koff,c=Ksyn
+#convert density to cell counts by multiplying cell number
+Y <- 148*dpb(x=0:20, alpha=4.293486, beta=566.8362, c=1.14175*566.8362)
+#plot(0:20,X, type='l')
+X=c(0:20)
+curv <-as.data.frame(cbind(X,Y))
+
+pick <- readRDS('./input/pick.rds')
+pick$ID <- rownames(pick)
+ZNF131 <- pick %>%
+  filter(ID=="ENSG00000172262.11")
+ZNF131$ID <- NULL
+ZNF131 <-as.data.frame(t(ZNF131)) 
+
+p <- ggplot(ZNF131,aes(x=ENSG00000172262.11))+
+  geom_histogram(color="black",fill="grey80",size=0.25,bins = 20)+
+  geom_line(data=curv,aes(x=X,y=Y),color="red",linetype = "dashed",size=0.5)+
+  theme_man+
+  annotate(geom="text",x=12, y=20, label="Kon=4.29",size=2)+
+  annotate(geom="text",x=12, y=17, label="Koff=566.8",size=2)+
+  annotate(geom="text",x=12, y=14, label="Ksyn=647.2",size=2)+
+  xlab("UMI counts")+
+  ylab("cell counts")+
+  theme(legend.position='none')
+
+
+ggsave(filename = "fittingeg.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+
+################another exampole
+
+LHFPL6 <- pick %>%
+  filter(ID=="ENSG00000183722.9")
+LHFPL6$ID <- NULL
+LHFPL6 <-as.data.frame(t(LHFPL6)) 
+
+
+Y <- 148*dpb(x=0:8, alpha=0.6728892, beta=16.14793, c=1.0176175*16.14793)
+#plot(0:20,X, type='l')
+X=c(0:8)
+curv <-as.data.frame(cbind(X,Y))
+
+
+p <- ggplot(LHFPL6,aes(x=ENSG00000183722.9))+
+  geom_histogram(color="black",fill="grey80",size=0.25,bins = 10)+
+  geom_line(data=curv,aes(x=X,y=Y),color="red",linetype = "dashed",size=0.5)+
+  theme_man+
+  annotate(geom="text",x=5, y=50, label="Kon=0.67",size=2)+
+  annotate(geom="text",x=5, y=42, label="Koff=16.1",size=2)+
+  annotate(geom="text",x=5, y=34, label="Ksyn=16.4",size=2)+
+  xlab("UMI counts")+
+  ylab("cell counts")+
+  theme(legend.position='none')
+
+ggsave(filename = "fittingeg2.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r bursting frequency and size Fig4f}
+#bursting frequency
+##################################################################################################################
+bf_bs_e <- readRDS('./input/bf_bs_e.rds')
+
+p <- bf_bs_e %>% ggplot(aes(x=logf))+
+  geom_histogram(bins = 100,color="#f29696", fill="#e4e4e4")+
+  theme_man+
+  #change x and y labels
+  xlab("bursting frequency(log10)")+  
+  ylab("gene counts")+ 
+  #change legend size
+  guides(colour = guide_legend(override.aes = list(size=1)))
+
+ggsave(filename = "frequency_distribution.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+#################################################################################################################
+#bursting size
+##################################################################################################################
+p <- bf_bs_e %>% ggplot(aes(x=logs))+
+  geom_histogram(bins = 100,color="#f29696", fill="#e4e4e4")+
+  theme_man+
+  #change x and y labels
+  xlab("bursting size(log10)")+  
+  ylab("gene counts")+
+  #change legend size
+  guides(colour = guide_legend(override.aes = list(size=1)))
+
+ggsave(filename = "size_distribution.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+```{r frequency vs noise fig 4g }
+noise_FSO <- readRDS('./input/noise_FSO.rds')
+
+#random sample 2000 genes for plotting
+RN <- nrow(noise_FSO)
+RS <- sample (RN, size=2000, replace =F)
+noise_FSOR <- noise_FSO[RS,]
+
+p <- noise_FSOR %>% ggplot(aes(x=log2(countCV),y=log2(B_freqency)))+
+  geom_point(size=0.1,color='grey')+
+  geom_smooth(method = "lm",color="red",se = FALSE,size=0.25)+
+  theme_man+
+  annotate(geom="text",x=0, y=-5, label="Pearson r=-0.914",size=2)+
+  #change x and y labels
+  xlab("Burst frequency(log2)")+
+  ylab("Expression noise(log2)")
+ggsave(filename = "noise_frequency.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+cor(x=log2(noise_FSO$countCV),y=log2(noise_FSO$B_freqency),method = 'pearson')
+```
+
+```{r frequency and size vs mean SF 6e Fig 4h}
+#frequency vs mean
+#################################################################################################################
+bf_bs_e <- readRDS('./input/bf_bs_e.rds')
+
+#random sample 2000 genes for plotting
+RN <- nrow(bf_bs_e)
+RS <- sample (RN, size=2000, replace =F)
+bf_bs_eR <- bf_bs_e[RS,]
+
+p <- bf_bs_eR %>% ggplot(aes(x=logtranscript,y=logf))+
+  geom_point(size=0.1,color = "grey")+
+  geom_smooth(method = "loess",se = FALSE,color="red",size=0.25)+
+  theme_man+
+  #change x and y labels
+  xlab("Expression level(log10)")+  
+  ylab("Burst frequency(log10)")+ 
+  annotate(geom="text",x=1, y=-1, label="pearson r=0.839",size=2)
+ggsave(filename = "frequency_mean.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+cor(bf_bs_e$logf,bf_bs_e$logtranscript,method = 'pearson')
+cor.test(bf_bs_e$logf,bf_bs_e$logtranscript,method = 'pearson')
+0.839
+#p-value < 2.2e-16
+#size vs mean
+#################################################################################################################
+p <- bf_bs_eR %>% ggplot(aes(x=logtranscript,y=logs))+
+  geom_point(size=0.1,color = "grey")+
+  geom_smooth(method = "loess",se = FALSE,color="red",size=0.25)+
+  theme_man+
+  #change x and y labels
+  xlab("Expression level(log10)")+  
+  ylab("Burst size(log10)")
+  #annotate(geom="text",x=0, y=1.8, label="Spearman r=0.74",size=2)
+ggsave(filename = "size_mean.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+cor(bf_bs_e$logs,bf_bs_e$logtranscript,method = 'spearman')
+0.74
+cor.test(bf_bs_e$logs,bf_bs_e$logtranscript,method = 'spearman')
+p-value < 2.2e-16
+```
+
+```{r A/B compartment frequency and size Fig 4i}
+##frequency and size, A/B compartment
+########################################################################################################
+bfbs_AB <- readRDS('./input/bfbs_ABcompartment.rds')
+bfbs_AB <- bfbs_AB%>%group_by(AB)
+
+##frequncy AB
+frequency_meidan <- bfbs_AB%>%summarise(med=median(B_freqency))
+
+p <- bfbs_AB %>% ggplot(aes(x=B_freqency,color=AB))+
+  geom_density(size=0.25)+
+  scale_x_log10()+
+  #stat_compare_means()+
+  geom_vline(data=frequency_meidan,aes(xintercept=med, color=AB),
+             linetype="dashed")+
+  theme_man+
+  theme(legend.position = c(0.15, 0.8),
+        legend.key.size = unit(0.1, "cm"),
+        legend.key.width = unit(0.1, "cm"),
+        legend.text = element_text(size=6))+
+  annotate(geom="text",x=0.1, y=1.5, label="p=0.00086",size=2)+
+  ylab('density')+
+  xlab("bursting frequency")
+ggsave(filename = "frequency_AB_wt.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
+
+##size AB
+size_meidan <- bfbs_AB%>%summarise(med=median(B_size))
+
+p <- bfbs_AB %>% ggplot(aes(x=B_size,color=AB))+
+  geom_density(size=0.25)+
+  scale_x_log10()+
+  #stat_compare_means()+
+  geom_vline(data=size_meidan,aes(xintercept=med, color=AB),
+             linetype="dashed")+
+  theme_man+
+  theme(legend.position = c(0.3, 0.8),
+        legend.key.size = unit(0.1, "cm"),
+        legend.key.width = unit(0.1, "cm"),
+        legend.text = element_text(size=6))+
+  annotate(geom="text",x=10, y=2, label="p=0.039",size=2)+
+  ylab('density')+
+  xlab("bursting size")
+ggsave(filename = "size_AB_wt.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
+
+#########################################################################################
+```
+

@@ -1,0 +1,408 @@
+---
+title: "Supplementary Fig5"
+author: "Lyu"
+date: "7/19/2022"
+output: html_document
+---
+
+```{r UMI vs input DIY SF 5a}
+ERCCSM <- readRDS('./input/ERCCSMextra.rds')
+
+p <- ERCCSM %>%ggplot(aes(x=MN,y=meanstripts))+
+  geom_point(size=0.1)+
+  scale_x_log10(limits=c(50, 10000)) +
+  scale_y_log10()+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.2, 0.9),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  annotate(geom="text",x=150, y=3000, label="PCC=0.932",size=2)+
+  #change x and y labels
+  xlab("Spike-ins_A60_copy#")+  
+  ylab("UMI#")
+cor(log10(ERCCSM$meanstripts),log10(ERCCSM$MN),method = 'pearson')
+ggsave(filename = "LAST_UMI_vs_ERCCSM.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r reads vs input DIY SF 5b}
+erccreads_UMIs <- readRDS('./input/reads_vs_UMI_DIY.rds')
+p <-erccreads_UMIs%>% ggplot(aes(x=MN, y=erccmeadreads ))+
+  geom_point(size=0.1)+
+  #remove background
+  theme_man+
+  scale_x_log10(limits= c(30, 10000)) +
+  scale_y_log10() +
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  annotate(geom="text",x=100, y=3000, label="PCC=0.905",size=2)+
+  #xlim(0, 9)+
+  #ylim(0, 9)+
+  #change x and y labels
+  xlab("Spike-ins_A60_copy#")+  
+  ylab("Reads#")
+cor(log10(erccreads_UMIs$erccmeadreads),log10(erccreads_UMIs$MN),method = 'pearson')
+ggsave(filename = "reads_vs_MN_erccsm.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+```{r ERCC vs Spike-ins_A60 LAST-seq SF 5c}
+ERCC <- readRDS('10_average_ERCC_spikes.rds')
+ERCCSM <- readRDS('ERCCSMextra.rds')
+
+ERCCm <- ERCC[,c(1,12:13)]
+ERCCm <- ERCCm %>%
+  filter(mnum > 65 & mnum < 5000)
+
+ERCCm$type <- rep('ERCC',22)
+
+ERCCSMm <- data.frame(ID=ERCCSM$ID,mnum=ERCCSM$MN,meanspikes=ERCCSM$meanstripts)
+ERCCSMm$type <- rep('DIY',24)
+
+meg <- rbind(ERCCm,ERCCSMm)
+
+p <- meg %>%ggplot(aes(x=mnum,y=meanspikes,color=type))+
+  geom_point(size=0.1)+
+  scale_x_log10() +
+  scale_y_log10()+
+  stat_smooth(method="lm", se=FALSE,formula = y~1+offset(x),size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.2, 0.9),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  #change x and y labels
+  xlab("Spike-in_copy#")+  
+  ylab("UMI#")
+
+ggsave(filename = "LAST_ERCC_vs_ERCCSM.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+```{r ERCC vs Spike-ins_A60 detection LAST-seq SF 5d}
+LAST_ERCC <- read.table("./input/LAST_ERCC_smooth.csv",sep = ",")
+colnames(LAST_ERCC) <- c("copy_number","detection_rate")
+LAST_ERCC$type <- rep("LAST_ERCC",26)
+
+SMART_ERCC <- read.table("./input/SMART_ERCC_smooth.csv",sep = ",")
+colnames(SMART_ERCC) <- c("copy_number","detection_rate")
+SMART_ERCC$type <- rep("SMART_ERCC",26)
+
+LAST_DIY <- read.table("./input/LAST_DIY_smooth.csv",sep = ",")
+colnames(LAST_DIY) <- c("copy_number","detection_rate")
+LAST_DIY$type <- rep("LAST_DIY",16)
+
+SMART_DIY <- read.table("./input/SMART_DIY_smooth.csv",sep = ",")
+colnames(SMART_DIY) <- c("copy_number","detection_rate")
+SMART_DIY$type <- rep("SMART_DIY",16)
+
+#split LAST ERCC vs DIY
+meglast <- rbind(LAST_ERCC,LAST_DIY)
+
+p <- meglast%>%ggplot(aes(x=copy_number,y=detection_rate,color=type))+
+  geom_smooth(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.8, 0.2),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  xlab("spike-ins copy#")+
+  ylab("detection rate")+
+  scale_color_discrete(labels=c("spike-in_A60","spike-in_A24"))
+
+ggsave(filename = "LAST_CP.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+```{r sequencing and length matching ERCC vs DIY SF 5e}
+ERCC500m <- readRDS('./input/ERCC500.rds')
+meg2 <- inner_join(ERCCSMm,ERCC500m,by='ID')
+
+DIY <- meg2[1:4]
+DIY$rate <- DIY$meanspikes.x/DIY$mnum.x
+DIY <- DIY[c(1,4,5)]
+colnames(DIY) <- c('ID','type','rate')
+
+ERC <- meg2[c(1,5:7)]
+ERC$rate <- ERC$meanspikes.y/ERC$mnum.y
+ERC <- ERC[c(1,4,5)]
+colnames(ERC) <- c('ID','type','rate')
+
+meg3 <- rbind(DIY,ERC)
+
+##plot bar
+
+p <- ggplot(data=meg3, aes(x=ID, y=rate,fill=type)) +
+  geom_bar(stat="identity",width=0.8,position=position_dodge())+
+  #geom_errorbar(aes(ymin=value-SEM, ymax=value+SEM),width=.25,size=0.25,position=position_dodge(.9))+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.9, 0.9),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.text = element_text(size=5))+
+  xlab(" ")+
+  ylab("capture efficiency")
+
+ggsave(filename = "LAST_ERCC_DIY_matching.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+```{r SMART on ERCC vs DIY SF  5f}
+
+LAST_ERCC <- read.table("./input/LAST_ERCC_smooth.csv",sep = ",")
+colnames(LAST_ERCC) <- c("copy_number","detection_rate")
+LAST_ERCC$type <- rep("LAST_ERCC",26)
+
+SMART_ERCC <- read.table("./input/SMART_ERCC_smooth.csv",sep = ",")
+colnames(SMART_ERCC) <- c("copy_number","detection_rate")
+SMART_ERCC$type <- rep("SMART_ERCC",26)
+
+LAST_DIY <- read.table("./input/LAST_DIY_smooth.csv",sep = ",")
+colnames(LAST_DIY) <- c("copy_number","detection_rate")
+LAST_DIY$type <- rep("LAST_DIY",16)
+
+SMART_DIY <- read.table("./input/SMART_DIY_smooth.csv",sep = ",")
+colnames(SMART_DIY) <- c("copy_number","detection_rate")
+SMART_DIY$type <- rep("SMART_DIY",16)
+
+#split SMART ERCC vs DIY
+megsmart <- rbind(SMART_ERCC,SMART_DIY)
+
+p <- megsmart%>%ggplot(aes(x=copy_number,y=detection_rate,color=type))+
+  geom_smooth(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.8, 0.2),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  xlab("spike-ins copy#")+
+  ylab("detection rate")+
+  scale_color_discrete(labels=c("spike-in_A60","spike-in_A24"))
+
+ggsave(filename = "SMART_CP.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+
+```{r cel-seq on ERCC and DIY SF 5g}
+cel_ercc <- cel_last_erccf[,c(6,19)]
+cel_ercc$type <- rep('ERCC',26)
+cel_ercc <- cel_ercc%>%
+  filter(mnum < 5000)
+
+cel_diy <- cel_last_DIYf[,c(6,19)]
+cel_diy$type <- rep('DIY',24)
+
+cel_ercc_diy <- rbind(cel_ercc,cel_diy)
+
+p <- cel_ercc_diy %>%
+  ggplot(aes(x=mnum,color=type))+
+  scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  geom_point(aes(y=celmean),size=0.25)+
+  #stat_smooth(aes(y=celmean),method="lm", se=F,formula = y~1+offset(x),size=0.25)+
+  #geom_point(aes(y=celmean), color = "#00BFC4",size=0.25)+
+  theme_classic()+
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.2, 0.8),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  #change x and y labels
+  xlab("Spike-in_transcripts")+  
+  ylab("UMI#")
+
+ggsave(filename = "CEL_CP_DIY_ERCC.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r LAST vs SMART on ERCC SF 5h}
+megsmart_last <- rbind(LAST_ERCC,SMART_ERCC)
+
+p <- megsmart_last%>%ggplot(aes(x=copy_number,y=detection_rate,color=type))+
+  geom_smooth(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.8, 0.2),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  xlab("spike-ins copy#")+
+  ylab("detection rate of spike-in_A24")+
+  scale_color_discrete(labels=c("LASTseq","SMARTseq"))
+  
+
+ggsave(filename = "LAST_SMART_ERCC_CP.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r LAST-seq vs CEL-seq on ERCC SF 5i}
+cel_last_ercc <- full_join(celssercc,lastercc,by='ID')
+cel_last_ercc <- inner_join(cel_last_ercc,ERCC,by='ID')
+cel_last_erccf <- cel_last_ercc%>%
+  filter(mnum > 1)
+
+p <- cel_last_erccf %>%
+  ggplot(aes(x=mnum))+
+  scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  #geom_point(aes(y=log(CATTGG)))+
+  #stat_smooth(aes(y=lastmean),method="lm", se=F,formula = y~1+offset(x), color= "#F8766D",size=0.25)+
+  #geom_point(aes(y=CATTGG), color = "#F8766D",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=CGAAGA), color = "#F8766D",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=TTGCTG), color = "#F8766D",alpha=0.5,size=0.25)+
+  geom_point(aes(y=lastmean), color = "#F8766D",size=0.25)+
+  #stat_smooth(aes(y=celmean),method="lm", se=F,formula = y~1+offset(x), color= "#00BFC4",size=0.25)+
+  #geom_point(aes(y=CATGAG), color = "#00BFC4",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=AGCTTC), color = "#00BFC4",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=CAGATC), color = "#00BFC4",alpha=0.5,size=0.25)+
+  geom_point(aes(y=celmean), color = "#00BFC4",size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.2, 0.8),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  #change x and y labels
+  xlab("Spike-in_transcripts")+  
+  ylab("UMI#")
+
+ggsave(filename = "LAST_CEL_CP_ercc.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+######not included
+```{r technical noise scatter plot }
+LASTCV <- readRDS('averageCV_mean_1.rds')
+CELCV <- readRDS('averageCV_mean_cel.rds')
+SMARTCV <- readRDS('averageCV_mean_smart.rds')
+
+LASTCV$ID <- rownames(LASTCV)
+LASTCV <-  LASTCV%>%
+  filter(averagemean>0.5)
+
+CELCV$ID <- rownames(CELCV)
+CELCV <-  CELCV%>%
+  filter(averagemean>0.5)
+
+SMARTCV$ID <- rownames(SMARTCV)
+
+LAST_vs_CEL <- inner_join(LASTCV,CELCV,by='ID')
+
+LAST_vs_CEL_vs_SMART <- inner_join(LAST_vs_CEL,SMARTCV)
+
+p <-  LAST_vs_CEL_vs_SMART %>% ggplot(aes(x=smartCV,y=lastCV))+
+   geom_point(size=0.1)+
+   geom_abline(slope = 1,intercept = 0,color='red',size=0.25)+
+   theme_man+
+   ylim(0,4)+
+   ylab('LAST-seq(CV)')+
+   xlab("SMART-seq(CV)")
+ 
+ggsave(filename = "technical noise_last_smart.pdf",plot = p,width=90/2,height = 90/2,units = "mm", dpi = 300) 
+ 
+ 
+p <-  LAST_vs_CEL_vs_SMART %>% ggplot(aes(x=celCV,y=lastCV))+
+  geom_point(size=0.1)+
+  geom_abline(slope = 1,intercept = 0,color='red',size=0.25)+
+  theme_man+
+  ylim(0,4)+
+  xlim(0,4)+
+  ylab('LAST-seq(CV)')+
+  xlab("CEL-seq2(CV)")
+
+ggsave(filename = "technical noise_last_cel.pdf",plot = p,width=90/2,height = 90/2,units = "mm", dpi = 300) 
+```
+
