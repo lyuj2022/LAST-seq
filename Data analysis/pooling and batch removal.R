@@ -1,14 +1,14 @@
 #rm(list=ls()) 
 library(tidyverse)
 
-#load the matrix of read mapping and rename the cell ID for plate1
+#load the matrix containing read mapping info and rename the cell ID for plate1
 pool1read <- read.csv("pool1.readspercell.txt",sep = "\t",header = T)
 pool1read$RG <-  paste(1,pool1read$RG,sep = "_")
 
 pool1read <- pool1read %>% pivot_wider(names_from = RG, values_from = N)
 pool1read$'1_bad' <- NULL
 
-#load the matrix of read mapping rename the cell ID for plate2
+#load the matrix containing read mapping info and rename the cell ID for plate2
 pool2read <- read.csv("pool2.readspercell.txt",sep = "\t",header = T)
 pool2read$RG <-  paste(2,pool2read$RG,sep = "_")
 
@@ -66,7 +66,7 @@ p <- poolexonreads %>% ggplot(aes(x=" ",y=Exonreads))+
   )+
   scale_y_log10(limits=c(1e5, 1e8), label=scientific_10) +
   annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm"))+
-  xlab("SCC4-/- eHAP cells")+
+  xlab("eHAP cells")+
   ylab("reads mapped to exons")
 
 ggsave(filename = "reads distribution.pdf",plot = p,width=45/2,height = 45,units = "mm", dpi = 300)
