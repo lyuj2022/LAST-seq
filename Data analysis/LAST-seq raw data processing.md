@@ -5,7 +5,7 @@
 1, convert BCL files to fastq format by bcl2fastq
 
 ```shell
-#note, put the SampleSheet.csv file under 210920_NB501557_0142_AHTGHFBGXG (NextSeq result folder)
+#note, put the SampleSheet.csv file under 210920_NB501557_0142_AHTGHFBGXG folder (NextSeq result folder)
 bcl2fastq --runfolder-dir 210920_NB501557_0142_AHTGHFBGXG/ -p 64 --output-dir 210920_NB501557_0142_AHTGHFBGXG/fastq --no-lane-splitting
 ```
 
@@ -26,7 +26,7 @@ git clone https://github.com/sdparekh/zUMIs.git
 ```
 
 ```
-prepare reference
+prepare genome reference
 merge genome reference and ERCC reference or import the ERCC reference by zUMIs config file
 ```
 
