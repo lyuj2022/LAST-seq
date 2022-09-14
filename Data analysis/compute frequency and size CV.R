@@ -19,7 +19,7 @@ colnames(TADs) <- c("Chr","st","ed","name","length","tads")
 #load frequency and size
 bf_bs_e <- readRDS('./input/bf_bs_e.rds')
 
-#merge gene location (in TADs) and bursting frequency and size
+#merge gene location (in TADs) and burst frequency and size
 fre_size_TDAs <- inner_join(bf_bs_e,TADs, by="name")
 
 #discard genes without location information
@@ -59,6 +59,17 @@ boot_TADs_sizeCV <-data.frame(sizeCV=boot_TADs_sizeqCV,type=type)
 
 ### generate control
 
+###how to generate the control
+#1, randomly select 10 genes from the frequency/size matrix, then compute the CV of frequency and size.
+#The gene number is determined by the median of gene number of selected TADs.
+
+#2, repeat 1 for 10000 times and get the median of 10000 frequency/size CVs. As a result, we get one frequency CV and one size CV from 10000 times iteration. 
+#since we have more than 5000 genes in the frequency/size matrix, a random selection of 10 genes is not representative. 
+#To overcome this issue, we do the sampling 10000 times. For every time, we sample 10 genes and calculate the frequency CV and size CV.
+# Then, we take the median of 10000 frequency/size CVs. The median represents the frequency/size CV of a virtual TAD containing 10 genes.
+
+#3, we repeat 1 and 2 for 59 times so that we have 59 frequency/size CVs from 59 virtual TADs.                        
+                         
 #subset frequency and size 
 fre_size <- bf_bs_e[,1:2]
 
@@ -85,16 +96,6 @@ for (n in le) {
   medsizeCV[n] <- median(sizeCV)
 }
 
-##how to generate the control
-#1, randomly select 10 genes from the frequency/size matrix, then compute the CV of frequency and size.
-#The gene number is determined by the median of gene number of selected TADs.
-
-#2, repeat 1 for 10000 times and get the median of 10000 frequency/size CVs. As a result, we get one frequency CV and one size CV from 10000 times iteration. 
-#since we have more than 5000 genes in the frequency/size matrix, a random selection of 10 genes is not representative. 
-#To overcome this issue, we do the sampling 10000 times. For every time, we sample 10 genes and calculate the frequency CV and size CV.
-# Then, we take the median of 10000 frequency/size CVs. The median represents the frequency/size CV of a virtual TAD containing 10 genes.
-
-#3, we repeat 1 and 2 for 59 times so that we have 59 frequency/size CVs from 59 virtual TADs.
 
 ###freqCV_boot
 boot_contrl_FreqCV <- boot(data = medfreqCV,statistic = function(x,i) median(x[i]),R = 10000)
