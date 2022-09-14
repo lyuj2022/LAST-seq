@@ -161,7 +161,6 @@ batch <- c(rep(1, 73), rep(2, 75))
 
 adjusted <- ComBat_seq(count_matrix, batch=batch, group=NULL)
 
-#adjustedF <- adjusted[rowSums(adjusted>0) > 0,]
 write.csv(adjusted,"148adjusted.csv")#pool1&2
 ###########################################################################
 
@@ -176,7 +175,7 @@ Mc <- M[ , which(apply(M, 2, var) != 0)]
 ##PCA
 pca <- prcomp(Mc, scale = TRUE)
 
-#plot by PC1 and PC2
+#plot using PC1 and PC2
 plot(pca$x[,1],pca$x[,2])
 
 #the percentage of variance accounted by PC
