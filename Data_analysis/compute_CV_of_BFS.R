@@ -4,7 +4,7 @@ library(boot) #bootstraping algorithm
 
 #make CV function-------------------------------------------------
 
-cv <-  function(x){
+cv <-  function(x) {
   Cv = sd(x) / mean(x)
   return(Cv)
 }
@@ -35,12 +35,12 @@ median(tadselec$Freq) # 10
 #subset frequency and size matrix base on selected TADs
 selec_TADs <- tadselec$Var1
 length(selec_TADs)# 59
-fre_size_tads_selec <- fre_size_TDAs[fre_size_TDAs$tads %in% selec_TADs,]
+fre_size_tads_selec <- fre_size_TDAs[fre_size_TDAs$tads %in% selec_TADs, ]
 
 #calculate frequency and size CV of genes within the selected TADs
 fre_size_tads_selec_by <- fre_size_tads_selec %>% group_by(tads)
 SD_tads_fs <- fre_size_tads_selec_by %>% summarise(CVfreq=cv(B_freqency),CVsize=cv(B_size))
-SD_tads_fs$tads <-NULL
+SD_tads_fs$tads <- NULL
 
 #bootstrapping median_frequencyCV
 boot_TADs_FreqCV <- boot(data = SD_tads_fs$CVfreq,statistic = function(x,i) median(x[i]),R = 10000)
@@ -67,7 +67,7 @@ boot_TADs_sizeCV <-data.frame(sizeCV=boot_TADs_sizeqCV,type=type)
 #3, we repeat 1 and 2 for 59 times so that we have 59 frequency/size CVs from 59 virtual TADs.                        
                       
 #subset frequency and size------------------------------------------------------
-fre_size <- bf_bs_e[,1:2]
+fre_size <- bf_bs_e[, 1:2]
                          
 #generate empty vectors
 randoms <- vector("list",length = 10000)
@@ -81,10 +81,10 @@ medsizeCV <- vector("numeric",length = 59)
 #generate 59 CV numbers as those generated from 59 TADs.
 for (n in le) {
   #get representative CV 
-  for (i in inde){
+  for (i in inde) {
     #randomly select 10 genes, assuming they're in the same TAD. then get CVs
     randoms[[i]] <- sample(1:5156,10)
-    subgene <-  fre_size[randoms[[i]],]
+    subgene <-  fre_size[randoms[[i]], ]
     freqCV[i] <- cv(subgene$B_freqency)
     sizeCV[i] <- cv(subgene$B_size)
   }
