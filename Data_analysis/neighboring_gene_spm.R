@@ -1,6 +1,6 @@
 library(tidyverse)
 
-##load dataset to get expression matrix, gene coordinates, and gene orientations#########################
+##load dataset to get expression matrix, gene coordinates, and gene orientations--------
 #count matrix, nwt for wt, nscc for SCC4-/-
 adjusted <- read.csv("nwt.csv")
 
@@ -76,7 +76,7 @@ Chr22 <- countscor %>%
 ChrX <- countscor %>%
   filter(CHR=="chrX")
 
-##################################calculate distance and correlation coeffient for neighboring gene pairs.####################################################################
+#calculate distance and correlation coeffient for neighboring gene pairs----------
 #label gene direction. '1' represents '+'; '0' represents '-'
 Chrdir <- Chr1 %>%
   mutate(direct = case_when(
@@ -872,7 +872,7 @@ alldivergent <- allmerg %>%
 allsame <- allmerg %>%
   filter(type=='same')
 
-##################################################### plot #####################################################
+# plot ------------------------------------------------------------------------
 library(ggpubr)
 
 allmergF <- allmerg%>%
