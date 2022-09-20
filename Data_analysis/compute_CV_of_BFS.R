@@ -1,17 +1,16 @@
-
-####################################compare freuqncy and size CV############################################################3
-
+-----------------------------
+#load libraries 
 library(tidyverse)
+library(boot) #bootstraping algorithm
 
-#load bootstraping algorithm
-library(boot)
-
+-------------------------------------------------
 #make CV function
 cv <-  function(x){
   Cv = sd(x) / mean(x)
   return(Cv)
 }
 
+-------------------------------------------------
 #load gene locations in TADs
 TADs <- read.delim("wt_gene_TADs.bed",header = F)
 colnames(TADs) <- c("Chr","st","ed","name","length","tads")
@@ -55,11 +54,11 @@ boot_TADs_sizeqCV <- boot_TADs_sizeCV$t
 type <- c(rep("TAD",10000))
 boot_TADs_sizeCV <-data.frame(sizeCV=boot_TADs_sizeqCV,type=type)
 
-#############################################################################################################################################################
+--------------------------------------------------------------------------------------------
 
-### generate control
-
-###how to generate the control
+# generate control
+                         
+#how to generate the control
 #1, randomly select 10 genes from the frequency/size matrix, then compute the CV of frequency and size.
 #The gene number is determined by the median of gene number of selected TADs.
 
@@ -69,6 +68,7 @@ boot_TADs_sizeCV <-data.frame(sizeCV=boot_TADs_sizeqCV,type=type)
 # Then, we take the median of 10000 frequency/size CVs. The median represents the frequency/size CV of a virtual TAD containing 10 genes.
 
 #3, we repeat 1 and 2 for 59 times so that we have 59 frequency/size CVs from 59 virtual TADs.                        
+--------------------------------------------------------------------------------------------
                          
 #subset frequency and size 
 fre_size <- bf_bs_e[,1:2]
@@ -97,14 +97,14 @@ for (n in le) {
 }
 
 
-###freqCV_boot
+#freqCV_boot
 boot_contrl_FreqCV <- boot(data = medfreqCV,statistic = function(x,i) median(x[i]),R = 10000)
 boot_contrl_FreqCV <- boot_contrl_FreqCV$t
 type <- c(rep("RANDOM",10000))
 boot_contrl_FreqCV <-data.frame(FreqCV=boot_contrl_FreqCV,type=type)
 median(boot_contrl_FreqCV$FreqCV)
 0.5042855
-###sizeCV_boot
+#sizeCV_boot
 boot_contrl_sizeCV <- boot(data = medsizeCV,statistic = function(x,i) median(x[i]),R = 10000)
 boot_contrl_sizeCV <- boot_contrl_sizeCV$t
 type <- c(rep("RANDOM",10000))
