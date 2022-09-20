@@ -19,7 +19,7 @@ nwt <- CPM(wt)
 nwt  <- nwt[rowSums(nwt)/148 >=2,]
 
 #make a function to compute cv
-cv <-  function(x){
+cv <-  function(x) {
   Cv = sd(x,na.rm = T) / mean(x,na.rm =T)
   return(Cv)
 }
@@ -65,7 +65,7 @@ clean_TAD_counts <- clean_TAD_counts[, c(4,9:157)]
 
 #make a function to combine PCC/SCC and p-value
 
-flat_cor_mat <- function(cor_r, cor_p){
+flat_cor_mat <- function(cor_r, cor_p) {
   #This function provides a simple formatting of a correlation matrix
   #into a table with 4 columns containing :
   # Column 1 : row names (variable 1 for the correlation test)
@@ -118,10 +118,10 @@ tadboundselec <- tads_statbound %>%
   filter(Freq >=2)
 selec_TADbound <- tadboundselec$Var1
 
-mean_cv_tadbound_selec <- mean_cv_TDAbound[mean_cv_TDAbound$tads %in% selec_TADbound,]
+mean_cv_tadbound_selec <- mean_cv_TDAbound[mean_cv_TDAbound$tads %in% selec_TADbound, ]
 
 clean_TADbound_counts <- inner_join(mean_cv_tadbound_selec,nwt_,by="gene_id")
-clean_TADbound_counts <- clean_TADbound_counts[,c(4,9:157)]
+clean_TADbound_counts <- clean_TADbound_counts[, c(4,9:157)]
 
 inde <- as.character(tadboundselec$Var1)
 PCClistbound <- vector("list",length = 249)
