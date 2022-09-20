@@ -1,16 +1,15 @@
 library(tidyverse)
-#load counts matrix (batch effect corrected)
+
+#load counts matrix (batch effect corrected)---------------------------------------
 setwd("./input/")
 wt <- read.csv("148adjusted.csv",row.names = 1)
-wt <- wt[!grepl("^ERCC-",rownames(wt)),]
+wt <- wt[!grepl("^ERCC-",rownames(wt)), ]
 
 #normalize total UMI
 #make a function for normalization, set 100000 as scaling up factors
-CPM <- function (expr_mat)
-{
+CPM <- function (expr_mat) {
   norm_factor <- colSums(expr_mat,na.rm = T)
-  return(100000*t(t(expr_mat)/norm_factor)
-  )
+  return(100000*t(t(expr_mat)/norm_factor))
 }
 
 #normalize count by libray size
@@ -56,13 +55,13 @@ tadselec <- tads_stat %>%
 #retrieve TADs ID
 selec_TADs <- tadselec$Var1
 #retrieve gene ID
-mean_cv_tads_selec <- mean_cv_TDAs[mean_cv_TDAs$tads %in% selec_TADs,]
+mean_cv_tads_selec <- mean_cv_TDAs[mean_cv_TDAs$tads %in% selec_TADs, ]
 
 #retrieve counts for selected genes
 nwt_ <- as.data.frame(nwt)
 nwt_$gene_id <- rownames(nwt_)
 clean_TAD_counts <- inner_join(mean_cv_tads_selec,nwt_,by="gene_id")
-clean_TAD_counts <- clean_TAD_counts[,c(4,9:157)]
+clean_TAD_counts <- clean_TAD_counts[, c(4,9:157)]
 
 #make a function to combine PCC/SCC and p-value
 
@@ -145,10 +144,10 @@ PCC_pbound <- do.call(rbind, PCClistbound)
 ##################################################################################################################################################
 ## compute PCC for all genes 
 allgenecounts <- inner_join(mean_cv_wt_f,nwt_,by="gene_id")
-tepID <- allgenecounts[,4:152]
+tepID <- allgenecounts[, 4:152]
 
 rownames(tepID) <- tepID$gene_name
-tepID <-tepID[,-1]
+tepID <-tepID[, -1]
 
 tepIDcor <- cor(t(tepID),method = "spearman")
 tepIDcorp <-cor_pmat(t(tepID),method = "spearman")
