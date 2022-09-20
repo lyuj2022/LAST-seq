@@ -1,69 +1,69 @@
 library(tidyverse)
 
-#load counts matrix (batch effect corrected)---------------------------------------
+# load counts matrix (batch effect corrected)---------------------------------------
 setwd("./input/")
 wt <- read.csv("148adjusted.csv",row.names = 1)
 wt <- wt[!grepl("^ERCC-",rownames(wt)), ]
 
-#normalize total UMI
-#make a function for normalization, set 100000 as scaling up factors
+# normalize total UMI
+# make a function for normalization, set 100000 as scaling up factors.
 CPM <- function (expr_mat) {
   norm_factor <- colSums(expr_mat,na.rm = T)
   return(100000*t(t(expr_mat)/norm_factor))
 }
 
-#normalize count by libray size
+# normalize count by libray size
 nwt <- CPM(wt)
-#keep genes with average expression level >= 2. Here, 2 is an arbitary number. 
-#Genes with high expression level are usually less affected by technical noise.
+# keep genes with average expression level >= 2. Here, 2 is an arbitary number. 
+# Genes with high expression level are usually less affected by technical noise.
 nwt  <- nwt[rowSums(nwt)/148 >=2,]
 
-#make a function to compute cv
+# make a function to compute cv
 cv <-  function(x) {
   Cv = sd(x,na.rm = T) / mean(x,na.rm =T)
   return(Cv)
 }
 
-#compute mean and cv in case they are needed somewhere. In fact, We didn't need mean and cv in the downstream analysis
+# compute mean and cv in case they are needed somewhere. In fact, We didn't need mean and cv in the downstream analysis
 countCV <- apply(nwt, MARGIN = 1, cv)
 countmean <- apply(nwt, MARGIN = 1, mean)
 countCV <- unlist(countCV)
 countmean <- unlist(countmean)
 mean_cv_wt <-as.data.frame(cbind(countmean,countCV)) 
 
-#load annotation including genename 
+# load annotation including genename 
 genename <- read.csv("lastsp.gene_names.txt",sep = "\t")
 mean_cv_wt$gene_id <- rownames(mean_cv_wt)
 
-#annotate genes with their names
+# annotate genes with their names
 mean_cv_wt_f <- inner_join(mean_cv_wt,genename,by="gene_id")
 
-#load genes with TAD coordinates
+# load genes with TAD coordinates
 TADs <- read.delim("wt_gene_TADs.bed",header = F)
 colnames(TADs) <- c("Chr","st","ed","gene_name","length","tads")
 
-#select genes located in TADs
+# select genes located in TADs
 mean_cv_TDAs <- inner_join(mean_cv_wt_f,TADs, by="gene_name")
 mean_cv_TDAs <- mean_cv_TDAs %>%
   filter(tads != "")
 tads_stat <- as.data.frame(table(mean_cv_TDAs$tads))
 
-#select TADs containing >= 2 genes
+# select TADs containing >= 2 genes
 tadselec <- tads_stat %>%
   filter(Freq >=2)
 
-#retrieve TADs ID
+# retrieve TADs ID
 selec_TADs <- tadselec$Var1
 #retrieve gene ID
 mean_cv_tads_selec <- mean_cv_TDAs[mean_cv_TDAs$tads %in% selec_TADs, ]
 
-#retrieve counts for selected genes
+# retrieve counts for selected genes
 nwt_ <- as.data.frame(nwt)
 nwt_$gene_id <- rownames(nwt_)
 clean_TAD_counts <- inner_join(mean_cv_tads_selec,nwt_,by="gene_id")
 clean_TAD_counts <- clean_TAD_counts[, c(4,9:157)]
 
-#make a function to combine PCC/SCC and p-value
+# make a function to combine PCC/SCC and p-value
 
 flat_cor_mat <- function(cor_r, cor_p) {
   #This function provides a simple formatting of a correlation matrix
@@ -84,7 +84,7 @@ flat_cor_mat <- function(cor_r, cor_p) {
   cor_p_matrix
 }
 
-#use FOR loop to compute SCCs of gene pairs for each TADs
+# use FOR loop to compute SCCs of gene pairs for each TADs
 inde <- as.character(tadselec$Var1)
 PCClist <- vector("list",length = 551)
 
@@ -102,11 +102,10 @@ for (i in seq_along(inde)) {
   PCClist[[i]] <- flat_cor_mat(tepIDcor,tepIDcorp)
 }
 
-#merge all elements in list by row
+# merge all elements in list by row
 PCC_p <- do.call(rbind, PCClist)
 
-##################################################################################################################################################
-#the same strategy applies to TAD boundaries
+# the same strategy applies to TAD boundaries--------------------------------------------
 TADbound <- read.delim("wt_gene_TADbound_0.05.bed",header = F)
 colnames(TADbound) <- c("Chr","st","ed","gene_name","length","tads")
 mean_cv_TDAbound <- inner_join(mean_cv_wt_f,TADbound, by="gene_name")
@@ -141,8 +140,7 @@ for (i in seq_along(inde)) {
 
 PCC_pbound <- do.call(rbind, PCClistbound)
 
-##################################################################################################################################################
-## compute PCC for all genes 
+## compute PCC for all genes------------------------------------------------
 allgenecounts <- inner_join(mean_cv_wt_f,nwt_,by="gene_id")
 tepID <- allgenecounts[, 4:152]
 
@@ -151,7 +149,7 @@ tepID <-tepID[, -1]
 
 tepIDcor <- cor(t(tepID),method = "spearman")
 tepIDcorp <-cor_pmat(t(tepID),method = "spearman")
-#move duplicates and 1
+# move duplicates and 1
 tepIDcor[lower.tri(tepIDcor, diag = TRUE)] <- NA
 tepIDcorp[lower.tri(tepIDcorp, diag = TRUE)] <- NA
 
