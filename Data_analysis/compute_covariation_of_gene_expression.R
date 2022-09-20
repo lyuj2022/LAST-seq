@@ -16,7 +16,7 @@ CPM <- function (expr_mat) {
 nwt <- CPM(wt)
 # keep genes with average expression level >= 2. Here, 2 is an arbitary number. 
 # Genes with high expression level are usually less affected by technical noise.
-nwt  <- nwt[rowSums(nwt)/148 >=2,]
+nwt  <- nwt[rowSums(nwt)/148 >=2, ]
 
 # make a function to compute cv
 cv <-  function(x) {
@@ -76,11 +76,11 @@ flat_cor_mat <- function(cor_r, cor_p) {
   library(tibble)
   cor_r <- rownames_to_column(as.data.frame(cor_r), var = "row")
   cor_r <- gather(cor_r, column, cor, -1)
-  cor_r <- cor_r %>%filter(cor != "NA")
+  cor_r <- cor_r %>% filter(cor != "NA")
   cor_p <- rownames_to_column(as.data.frame(cor_p), var = "row")
   cor_p <- gather(cor_p, column, p, -1)
   cor_p_matrix <- left_join(cor_r, cor_p, by = c("row", "column"))
-  #cor_p_matrix <- cor_p_matrix%>%filter(p<=0.05)
+  #cor_p_matrix <- cor_p_matrix %>% filter(p<=0.05)
   cor_p_matrix
 }
 
