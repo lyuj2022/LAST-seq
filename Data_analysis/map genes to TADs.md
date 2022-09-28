@@ -65,6 +65,8 @@ V1 <- paste("chr",t$V1,sep = "")
 t$V1 <- V1
 write.table(t,"wt_min300k_max1M_step100k_thres0.05_delta0.01_fdr_domains.bed",sep = "\t",quote = F,col.names = F,row.names = F)
 
+#use R scripts ("organize_TADmiddle_coor_0.05.R" & "organize_TADbound_coor_0.05.R" to tweak coordinates of TAD and TAD boundary.
+# the resulant files are named "TADbound_0.05.bed" & 
 #see Data file for the resultant data
 ```
 
