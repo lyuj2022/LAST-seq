@@ -4,21 +4,37 @@
 #configue computing resource on Biowulf
 sinteractive --cpus-per-task=32 --mem=64g --time=10:00:00 --gres=lscratch:50 --tunnel
 
-#download contact matrix
+#download contact matrix of HAP1 and rename it as HAP1.hic
 wget https://4dn-open-data-public.s3.amazonaws.com/fourfront-webprod/wfoutput/2bf4cce8-6e03-422b-a190-e51d4a07d501/4DNFI1E6NJQJ.hic
-#download AB compartment bigwig data
+
+#download AB compartment bigwig data and rename it as HAP1compartment.bw
 wget https://4dn-open-data-public.s3.amazonaws.com/fourfront-webprod/wfoutput/a906c6b2-1563-40d4-bbde-6913c43ca8d4/4DNFIAXG3ZPL.bw
 
 
-#download bigwigtobedgraph on the local laptop
+#download bigwigtobedgraph to convert bw format to bedgraph
 rsync -aP \
    rsync://hgdownload.soe.ucsc.edu/genome/admin/exe/macOSX.x86_64/bigWigToBedGraph ./
+
 #convert bigwig to bedgraph on the local laptop. The bedgraph can be used as a bed file
 ./bigWigToBedGraph /Users/lyuj2/Downloads/HAP1compartment.bw HAP1compartment.BedGraph
 
+#extract coordinates information for A/B compartments using following R script
+
+library(tidyverse)
+AB <- read.delim("HAP1compartment.bedGraph",header = F)
+AB <- AB %>%
+  filter(V4!="NaN")
+AB  <- AB %>%
+  mutate(type=case_when(V4>0~"A",
+                        TRUE ~ "B"
+                        ))
+AB$V4 <- NULL
+write.table(AB,"ABcompartments.bed",sep = "\t",quote = F,col.names = F,row.names = F)
+
+#see Data file for the resultant data
 ```
 
-##### Call TADS
+##### Call TADS (follow the HiCExplorer mannual and do it on biowulf)
 
 ```shell
 #convert hic to cool for resolution 10K,100K
@@ -40,9 +56,19 @@ hicFindTADs -m wt_matrix_100K.h5 \
 --delta 0.01 \
 --correctForMultipleTesting fdr \
 -p 32
+
+#format the data using the following R script
+
+library(tidyverse)
+t <- read.delim("wt_min300k_max1M_step100k_thres0.05_delta0.01_fdr_domains.bed",header = F)
+V1 <- paste("chr",t$V1,sep = "")
+t$V1 <- V1
+write.table(t,"wt_min300k_max1M_step100k_thres0.05_delta0.01_fdr_domains.bed",sep = "\t",quote = F,col.names = F,row.names = F)
+
+#see Data file for the resultant data
 ```
 
-##### Map genes to TADs by bedops
+##### Map genes to TADs and A/B compartments by bedops
 
 ```shell
 #activate my conda on biowulf
