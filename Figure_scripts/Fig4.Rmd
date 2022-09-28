@@ -227,7 +227,7 @@ p <- bfbs_AB %>% ggplot(aes(x=B_freqency,color=AB))+
   xlab("bursting frequency")
 ggsave(filename = "frequency_AB_wt.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
 
-######## K-K test, test whether two datasets are from the same distribution
+######## K-S test, test whether two datasets are from the same distribution
 daf <- bfbs_AB[,c(1,14)]
 
 data1 <- daf %>%
@@ -262,7 +262,7 @@ p <- bfbs_AB %>% ggplot(aes(x=B_size,color=AB))+
   xlab("bursting size")
 ggsave(filename = "size_AB_wt.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
 
-######## K-K test, test whether two datasets are from the same distribution
+######## K-S test, test whether two datasets are from the same distribution
 das <- bfbs_AB[,c(2,14)]
 
 data1 <- das %>%
