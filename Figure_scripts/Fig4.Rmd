@@ -222,10 +222,26 @@ p <- bfbs_AB %>% ggplot(aes(x=B_freqency,color=AB))+
         legend.key.size = unit(0.1, "cm"),
         legend.key.width = unit(0.1, "cm"),
         legend.text = element_text(size=6))+
-  annotate(geom="text",x=0.1, y=1.5, label="p=0.00086",size=2)+
+  annotate(geom="text",x=0.1, y=1.5, label="p-value = 0.01075",size=2)+
   ylab('density')+
   xlab("bursting frequency")
 ggsave(filename = "frequency_AB_wt.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
+
+######## K-K test, test whether two datasets are from the same distribution
+daf <- bfbs_AB[,c(1,14)]
+
+data1 <- daf %>%
+  filter(AB=='A')
+
+data2 <- daf %>%
+  filter(AB=='B')
+
+ks.test(data1$B_freqency, data2$B_freqency)
+#p-value = 0.01075
+
+###############################################
+
+
 
 ##size AB
 size_meidan <- bfbs_AB%>%summarise(med=median(B_size))
@@ -241,11 +257,23 @@ p <- bfbs_AB %>% ggplot(aes(x=B_size,color=AB))+
         legend.key.size = unit(0.1, "cm"),
         legend.key.width = unit(0.1, "cm"),
         legend.text = element_text(size=6))+
-  annotate(geom="text",x=10, y=2, label="p=0.039",size=2)+
+  annotate(geom="text",x=10, y=2, label="p-value = 0.1486",size=2)+
   ylab('density')+
   xlab("bursting size")
 ggsave(filename = "size_AB_wt.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
 
+######## K-K test, test whether two datasets are from the same distribution
+das <- bfbs_AB[,c(2,14)]
+
+data1 <- das %>%
+  filter(AB=='A')
+
+data2 <- das %>%
+  filter(AB=='B')
+
+ks.test(data1$B_size, data2$B_size)
+#p-value = 0.1486
+#########################################################################################
 #########################################################################################
 ```
 
