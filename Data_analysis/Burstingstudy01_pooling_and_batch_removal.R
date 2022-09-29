@@ -34,9 +34,9 @@ poolread_1_2_T <- poolread_1_2_T %>%
 poolread_1_2_f <- poolread_1_2_T %>%
   filter(exonrate > 50)
 
-#keep cells with total reads >= 100000
+#keep cells with Exon reads >= 50000
 poolread_1_2_f <- poolread_1_2_f %>%
-  filter(total >= 100000) 
+  filter(Exon >= 50000) 
 
 #get the cell index
 reads_f <- rownames(poolread_1_2_f)
