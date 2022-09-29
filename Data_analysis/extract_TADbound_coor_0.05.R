@@ -16,10 +16,10 @@ for (i in ind ) {
   flw[[i]] <- dat
 }
 ##############################################
-# the principle to extend the TADs  boundary by 5% of TADs
+# the principle to extend the TADs  boundary by including 5% of neighboring TAD regions
 # 1, focus on the right coordinates of TADs since they are boundaries, except the last TAD.
-# 2, for each TAD, we compute the distance of 5% of the TAD. i.e. frn
-# 3, for the i th boundary with location number ED, the starting coordinate is ED - frn of the i th TAD. The ending coordinate is ED + frn of the i+1 th TAD
+# 2, for each TAD, we compute the distance of 5% of the TAD region. i.e. frn
+# 3, for the i th boundary with location number ED, the starting coordinate is (ED - (frn of the i th TAD)). The ending coordinate is (ED + (frn of the i+1 th TAD))
 
 #retrieve chromosome-separated data
 flw1 <- flw[[1]]
