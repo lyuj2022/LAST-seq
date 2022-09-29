@@ -1,0 +1,45 @@
+project: lastsp
+sequence_files:
+  file1:
+    name: /data/lyuj2/Sequencingdata/9_21_21/lastsp_R1.fastq.gz
+    base_definition: cDNA(1-50)
+  file2:
+    name: /data/lyuj2/Sequencingdata/9_21_21/lastsp_R2.fastq.gz
+    base_definition:
+    - BC(9-14)
+    - UMI(1-8)
+reference:
+  STAR_index: /data/lyuj2/STAR_ref/index/STAR2.7.3a/
+  GTF_file: /data/lyuj2/GTF/gencode.v33.annotationE.gtf
+  additional_STAR_params: ''
+  additional_files: ~
+out_dir: /data/lyuj2/Sequencingdata/9_21_21/zUMIoutp/
+num_threads: 64
+mem_limit: 0
+filter_cutoffs:
+  BC_filter:
+    num_bases: 1
+    phred: 20
+  UMI_filter:
+    num_bases: 1
+    phred: 20
+barcodes:
+  barcode_num: ~
+  barcode_file: /data/lyuj2/Sequencingdata/9_21_21/barcode10.txt
+  automatic: no
+  BarcodeBinning: 3
+  nReadsperCell: 100
+counting_opts:
+  introns: yes
+  downsampling: '1000000,2000000,3000000,4000000,5000000'
+  strand: 0
+  Ham_Dist: 0
+  velocyto: no
+  primaryHit: yes
+  twoPass: yes
+make_stats: yes
+which_Stage: Counting
+Rscript_exec: Rscript
+STAR_exec: STAR
+pigz_exec: pigz
+samtools_exec: samtools
