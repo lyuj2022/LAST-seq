@@ -33,13 +33,13 @@ rownames(bf_bs) <- bf_bs$X2
 bf_bs$X2 <- NULL
 colnames(bf_bs) <- c("B_freqency","B_size")
 
-#calculate CV of  count matrix
+#calculate mean of  count matrix
 expression <- read.csv("148adjusted.csv",header = T, row.names = 1)
 transcript <- unlist(apply(expression,MARGIN = 1,mean))
 transcript <- as.data.frame(transcript)
 transcript$ID <- rownames(transcript)
 
-#combine bursting kinetics and expression CV
+#combine bursting kinetics and expression mean
 bf_bs$ID <- rownames(bf_bs)
 bf_bs_e <- inner_join(bf_bs,transcript, by= "ID")
 
