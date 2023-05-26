@@ -9,56 +9,60 @@ library(tidyverse)
 library(scales)
 ```
 
-```{r polyA length Fig2a}
-polyA_length <- read.csv('Hela polyA length.csv')
+```{r LAST-seq vs CEL-seq on ERCC and A60 Fig2 b/c}
+#ERCC and DIY
+ERCC <- read.csv('./input/ERCC.csv',header = F)
+colnames(ERCC) <- c('ID','mnum')
+DIY <- read.csv('./input/ERCCSMM.csv',header = F)
+colnames(DIY) <- c('ID','mnum')
 
-p <- polyA_length%>%ggplot(aes(x=length))+
-  geom_density(size=0.25)+
-  geom_vline(xintercept = median(polyA_length$length),size=0.25,color='red')+
-  #geom_vline(xintercept = 24,color='red',size=0.25)+
-  theme_classic() +
-  theme(
-    axis.text.y = element_text(size=6),
-    axis.text.x = element_text(size = 6),
-    axis.title = element_text(colour='black', size=7),
-    legend.title=element_blank(),
-    legend.key=element_blank(),
-    axis.line.x = element_line(colour = "black", size=0.25),
-    axis.line.y = element_line(colour = "black", size=0.25),
-    axis.ticks.x = element_line(colour = "black", size = 0.25),
-    axis.ticks.y = element_line(colour = "black", size = 0.25),
-    strip.background=element_blank(),
-    strip.text=element_text(size=7)
-    )+
-  xlim(0,250)+
-  #annotate(geom="text",x=0.1, y=1.5, label="p=0.00086",size=2)+
-  ylab('Density')+
-  xlab("PolyA length (nt)")
-ggsave(filename = "polyA length.pdf",plot = p,width=75,height =25,units = "mm", dpi = 300)
-```
+#cel-seq
+downsample_1M <- AllCounts$umicount$ex$downsampling$downsampled_1000000
+table_1M_ex <- as.matrix(downsample_1M)
+saveRDS(table_1M_ex,file = 'celss_1M.rds')
+celss <- readRDS('./input/celss_1M.rds')
 
-```{r LAST-seq vs SMART-seq on DIY Fig 2d}
+cellssrm <-na.omit(as.data.frame( celss[!grepl('^ERCC-',rownames(celss)),])) 
+celsserccall <- celss[grepl('^ERCC-',rownames(celss)),]
+celssercc <-as.data.frame(celsserccall[,c(1,6:8,10)]) 
+celssercc$celmean <- rowSums(celssercc)/5
+celssercc$ID <- rownames(celssercc)
 
-LAST_ERCC <- read.table("./input/LAST_ERCC_smooth.csv",sep = ",")
-colnames(LAST_ERCC) <- c("copy_number","detection_rate")
-LAST_ERCC$type <- rep("LAST_ERCC",26)
+celsssm <-as.data.frame(celsserccall[,-c(1,6:8,10)]) 
+celsssm$celmean <- rowSums(celsssm)/5
+celsssm$ID <- rownames(celsssm)
 
-SMART_ERCC <- read.table("./input/SMART_ERCC_smooth.csv",sep = ",")
-colnames(SMART_ERCC) <- c("copy_number","detection_rate")
-SMART_ERCC$type <- rep("SMART_ERCC",26)
+#last-seq
+last_UMI_1M_1A = table_1000K_ex
+lastercc <-as.data.frame(last_UMI_1M_1A[grepl('^ERCC-',rownames(last_UMI_1M_1A)),]) 
+lastercc$lastmean <- rowSums(lastercc)/10
+lastercc$ID <- rownames(lastercc)
 
-LAST_DIY <- read.table("./input/LAST_DIY_smooth.csv",sep = ",")
-colnames(LAST_DIY) <- c("copy_number","detection_rate")
-LAST_DIY$type <- rep("LAST_DIY",16)
+lastsm <-as.data.frame(last_UMI_1M_2A[grepl('^ERCC-',rownames(last_UMI_1M_2A)),]) 
+lastsm$lastmean <- rowSums(lastsm)/10
+lastsm$ID <- rownames(lastsm)
 
-SMART_DIY <- read.table("./input/SMART_DIY_smooth.csv",sep = ",")
-colnames(SMART_DIY) <- c("copy_number","detection_rate")
-SMART_DIY$type <- rep("SMART_DIY",16)
+cel_last_ercc <- full_join(celssercc,lastercc,by='ID')
+cel_last_ercc <- inner_join(cel_last_ercc,ERCC,by='ID')
+cel_last_erccf <- cel_last_ercc%>%
+  filter(mnum > 1)
 
-megsmart_last <- rbind(LAST_DIY,SMART_DIY)
-
-p <- megsmart_last%>%ggplot(aes(x=copy_number,y=detection_rate,color=type))+
-  geom_smooth(size=0.25)+
+p <- cel_last_erccf %>%
+  ggplot(aes(x=mnum))+
+  scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  #geom_point(aes(y=log(CATTGG)))+
+  #stat_smooth(aes(y=lastmean),method="lm", se=F,formula = y~1+offset(x), color= "#F8766D",size=0.25)+
+  #geom_point(aes(y=CATTGG), color = "#F8766D",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=CGAAGA), color = "#F8766D",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=TTGCTG), color = "#F8766D",alpha=0.5,size=0.25)+
+  geom_point(aes(y=lastmean), color = "#F8766D",size=0.25)+
+  #stat_smooth(aes(y=celmean),method="lm", se=F,formula = y~1+offset(x), color= "#00BFC4",size=0.25)+
+  #geom_point(aes(y=CATGAG), color = "#00BFC4",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=AGCTTC), color = "#00BFC4",alpha=0.5,size=0.25)+
+  #geom_point(aes(y=CAGATC), color = "#00BFC4",alpha=0.5,size=0.25)+
+  geom_point(aes(y=celmean), color = "#00BFC4",size=0.25)+
   theme_classic() +
   theme(
     axis.text.y = element_text(size=6),
@@ -72,45 +76,17 @@ p <- megsmart_last%>%ggplot(aes(x=copy_number,y=detection_rate,color=type))+
     axis.ticks.y = element_line(colour = "black", size = 0.25),
     strip.background=element_blank(),
     strip.text=element_text(size=7),
-    legend.position = c(0.8, 0.2),
+    legend.position = c(0.2, 0.8),
     legend.key.size = unit(0.05, "cm"),
     legend.key.width = unit(0.05, "cm"),
     legend.text = element_text(size=5))+
-  xlab("spike-ins copy#")+
-  ylab("detection rate of spike-in_A60")+
-  scale_color_discrete(labels=c("LASTseq","SMARTseq"))
+  #change x and y labels
+  xlab("Spike-in_transcripts")+  
+  ylab("UMI#")
 
-ggsave(filename = "LAST_SMART_DIY_CP.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+ggsave(filename = "LAST_CEL_CP_ercc.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
 
-```
-
-```{r LAST-seq vs CEL-seq2 A60 Fig2e}
-#ERCC and DIY
-ERCC <- read.csv('./input/ERCC.csv',header = F)
-colnames(ERCC) <- c('ID','mnum')
-DIY <- read.csv('./input/ERCCSMM.csv',header = F)
-colnames(DIY) <- c('ID','mnum')
-
-#cel-seq
-celsserccall <- celss[grepl('^ERCC-',rownames(celss)),]
-celssercc <-as.data.frame(celsserccall[,c(1,6:8,10)]) 
-celssercc$celmean <- rowSums(celssercc)/5
-celssercc$ID <- rownames(celssercc)
-
-celsssm <-as.data.frame(celsserccall[,-c(1,6:8,10)]) 
-celsssm$celmean <- rowSums(celsssm)/5
-celsssm$ID <- rownames(celsssm)
-
-#last-seq
-lastercc <-as.data.frame(last_UMI_1M_1A[grepl('^ERCC-',rownames(last_UMI_1M_1A)),]) 
-lastercc$lastmean <- rowSums(lastercc)/10
-lastercc$ID <- rownames(lastercc)
-
-lastsm <-as.data.frame(last_UMI_1M_2A[grepl('^ERCC-',rownames(last_UMI_1M_2A)),]) 
-lastsm$lastmean <- rowSums(lastsm)/10
-lastsm$ID <- rownames(lastsm)
-
-
+##plot DIY comparison ------------------------------------------------
 cel_last_DIY <- full_join(celsssm,lastsm,by='ID')
 cel_last_DIY <- inner_join(cel_last_DIY,DIY,by='ID')
 cel_last_DIYf <- cel_last_DIY%>%
@@ -164,4 +140,478 @@ linea <- lm(formula = log10(celmean)~1+offset(log10(mnum)), data = cel_last_DIYf
 print(linea)
 CP <- 10^-1.1
 ```
+
+```{r LAST-seq vs CEL-seq UMI Fig.2d}
+#CEL vs LAST on UMI counting on average, use downsampled dataset ------------------
+cel_UMI_125k <- readRDS('./input/CELss_UMI_125K.rds')
+cel_UMI_125kk <- as.data.frame(rowSums(cel_UMI_125k)/10)
+colnames(cel_UMI_125kk) <- 'meanreadsCEL'
+cel_UMI_125kk$ID <- rownames(cel_UMI_125kk)
+
+last_UMI_125k <- readRDS('./input/lastsp_UMI_125K.rds')
+last_UMI_125kk <- as.data.frame(rowSums(last_UMI_125k)/10)
+colnames(last_UMI_125kk ) <- 'meanreadsLAST'
+last_UMI_125kk$ID <- rownames(last_UMI_125kk)
+
+LAST_CEL_UMI_125k <- inner_join(last_UMI_125kk,cel_UMI_125kk,by='ID')
+
+#LAST_CEL_UMI_125k <- LAST_CEL_UMI_125k %>%
+  filter(meanreadsCEL>0.2 & meanreadsLAST>0.2)
+
+#random sample 2000 genes for plotting
+RN <- nrow(LAST_CEL_UMI_125k)
+RS <- sample (RN, size=5000, replace =F)
+LAST_CEL_UMIR <- LAST_CEL_UMI_125k[RS,]
+
+p <-LAST_CEL_UMIR%>% ggplot(aes(x=meanreadsCEL, y= meanreadsLAST))+
+  geom_point(size=0.1)+
+  geom_abline(intercept=0, slope=1,size=0.25, color='red')+
+  #remove background
+  theme_man+
+  scale_x_log10(limits= c(1, 2000)) +
+  scale_y_log10(limits= c(1, 2000)) +
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  annotate(geom="text",x=5, y=2000, label="PCC=0.729",size=2)+
+  #xlim(0, 9)+
+  #ylim(0.1, 10000)+
+  #change x and y labels
+  xlab("CEL-seq2 UMI numbers")+  
+  ylab("LAST-seq UMI numbers")
+cor(log10(LAST_CEL_UMI_125k$meanreadsLAST),log10(LAST_CEL_UMI_125k$meanreadsCEL),method = 'pearson')
+ggsave(filename = "LAST_CELss_UMI_genes.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+```{r gene,UMI comparison between CEL-seq and LAST-seq, Fig.2 e/f}
+AllCounts <- readRDS("./input/CELSS.dgecounts.rds") # replace the dataset when applying to LAST-seq and CEL-seq repeat2
+
+#count based on exon -------
+
+# downsample 25K
+downsample_25K_ex <- AllCounts$umicount$exon$downsampling$downsampled_25000
+table_25K_ex <- as.matrix(downsample_25K_ex)
+
+#count genes 
+ex_25K <- colSums(table_25K_ex != 0)
+
+#count UMI
+UMI_25K_ex <- colSums(table_25K_ex)
+
+#UMI/gene 25K
+Den_25K_ex <- UMI_25K_ex/ex_25K
+
+# downsample 50K
+downsample_50K_ex <- AllCounts$umicount$exon$downsampling$downsampled_50000
+table_50K_ex <- as.matrix(downsample_50K_ex)
+
+#count genes 
+ex_50K <- colSums(table_50K_ex != 0)
+
+#count UMI
+UMI_50K_ex <- colSums(table_50K_ex)
+
+#UMI/gene 50K
+Den_50K_ex <- UMI_50K_ex/ex_50K
+
+
+# downsample 75K
+downsample_75K_ex <- AllCounts$umicount$exon$downsampling$downsampled_75000
+table_75K_ex <- as.matrix(downsample_75K_ex)
+
+#count genes 
+ex_75K <- colSums(table_75K_ex != 0)
+
+#count UMI
+UMI_75K_ex <- colSums(table_75K_ex)
+
+#UMI/gene 75K
+Den_75K_ex <- UMI_75K_ex/ex_75K
+
+
+# downsample 100K
+downsample_100K_ex <- AllCounts$umicount$exon$downsampling$downsampled_100000
+table_100K_ex <- as.matrix(downsample_100K_ex)
+
+#count genes 
+ex_100K <- colSums(table_100K_ex != 0)
+
+#count UMI
+UMI_100K_ex <- colSums(table_100K_ex)
+
+#UMI/gene 100K
+Den_100K_ex <- UMI_100K_ex/ex_100K
+
+# downsample 125K
+downsample_125K_ex <- AllCounts$umicount$exon$downsampling$downsampled_125000
+table_125K_ex <- as.matrix(downsample_125K_ex)
+
+saveRDS(table_125K_ex, file = 'CELss_UMI_125K.rds')
+
+#count genes 
+ex_125K <- colSums(table_125K_ex != 0)
+
+#count UMI
+UMI_125K_ex <- colSums(table_125K_ex)
+
+#UMI/gene 125K
+Den_125K_ex <- UMI_125K_ex/ex_125K
+
+# downsample 150K
+downsample_150K_ex <- AllCounts$umicount$exon$downsampling$downsampled_150000
+table_150K_ex <- as.matrix(downsample_150K_ex)
+
+#count genes 
+ex_150K <- colSums(table_150K_ex != 0)
+
+#count UMI
+UMI_150K_ex <- colSums(table_150K_ex)
+
+#UMI/gene 150K
+Den_150K_ex <- UMI_150K_ex/ex_150K
+
+# downsample 200K
+downsample_200K_ex <- AllCounts$umicount$exon$downsampling$downsampled_200000
+table_200K_ex <- as.matrix(downsample_200K_ex)
+
+#count genes 
+ex_200K <- colSums(table_200K_ex != 0)
+
+#count UMI
+UMI_200K_ex <- colSums(table_200K_ex)
+
+#UMI/gene 200K
+Den_200K_ex <- UMI_200K_ex/ex_200K
+
+# downsample 400K
+downsample_400K_ex <- AllCounts$umicount$exon$downsampling$downsampled_400000
+table_400K_ex <- as.matrix(downsample_400K_ex)
+
+#count genes 
+ex_400K <- colSums(table_400K_ex != 0)
+
+#count UMI
+UMI_400K_ex <- colSums(table_400K_ex)
+
+#UMI/gene 400K
+Den_400K_ex <- UMI_400K_ex/ex_400K
+
+# downsample 800K
+downsample_800K_ex <- AllCounts$umicount$exon$downsampling$downsampled_800000
+table_800K_ex <- as.matrix(downsample_800K_ex)
+
+#count genes 
+ex_800K <- colSums(table_800K_ex != 0)
+
+#count UMI
+UMI_800K_ex <- colSums(table_800K_ex)
+
+#UMI/gene 800K
+Den_800K_ex <- UMI_800K_ex/ex_800K
+
+# downsample 1000K
+downsample_1000K_ex <- AllCounts$umicount$exon$downsampling$downsampled_1000000
+table_1000K_ex <- as.matrix(downsample_1000K_ex)
+
+#count genes 
+ex_1000K <- colSums(table_1000K_ex != 0)
+
+#count UMI
+UMI_1000K_ex <- colSums(table_1000K_ex)
+
+#UMI/gene 1000K
+Den_1000K_ex <- UMI_1000K_ex/ex_1000K
+
+celss_ex <- rbind(ex_25K,ex_50K,ex_75K,ex_100K,ex_125K,ex_150K,ex_200K,ex_400K,ex_800K,ex_1000K)
+celss_UMI_ex <- rbind(UMI_25K_ex,UMI_50K_ex,UMI_75K_ex,UMI_100K_ex,UMI_125K_ex,UMI_200K_ex,UMI_400K_ex)
+celss_den_ex <- rbind(Den_25K_ex,Den_50K_ex,Den_75K_ex,Den_100K_ex,Den_125K_ex,Den_200K_ex,Den_400K_ex)
+
+
+```
+
+```{r polyA length FigS5a}
+polyA_length <- read.csv('Hela polyA length.csv')
+
+p <- polyA_length%>%ggplot(aes(x=length))+
+  geom_density(size=0.25)+
+  geom_vline(xintercept = median(polyA_length$length),size=0.25,color='red')+
+  #geom_vline(xintercept = 24,color='red',size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7)
+    )+
+  xlim(0,250)+
+  #annotate(geom="text",x=0.1, y=1.5, label="p=0.00086",size=2)+
+  ylab('Density')+
+  xlab("PolyA length (nt)")
+ggsave(filename = "polyA length.pdf",plot = p,width=75,height =25,units = "mm", dpi = 300)
+```
+
+```{r explore gene delected by CEL-seq only, Fig.s5g}
+celssset <- readRDS('./input/CELss_UMI_125K.rds')
+celssset <- celssset[!grepl('^ERCC-',rownames(celssset)),]
+lastspset <- readRDS('./input/lastsp_UMI_125K.rds')
+lastspset <- lastspset[!grepl('^ERCC-',rownames(lastspset)),]
+
+# get genes detected by CEL-seq but not LAST-seq and genes also detected by LAST-seq ----------------------------
+
+incel <- celssset[ rowSums(celssset >0)>1, ]
+inlast <- lastspset[ rowSums(lastspset>0)>1, ]
+
+notinlast <- incel[!(rownames(incel) %in% rownames(inlast)), ]
+leftcel <- incel[(rownames(incel) %in% rownames(inlast)), ] # also detected by last-seq
+
+meanlast <- rowSums(leftcel)/10
+lastdec <- cbind(meanlast,rep('lastdec',9646))
+colnames(lastdec) <- c('mean','type')
+
+meannotinlast <- rowSums(notinlast)/10
+notlastdec <- cbind(meannotinlast,rep('notlastdec',2675))
+colnames(notlastdec) <- c('mean','type')
+
+megmean <-as.data.frame(rbind(lastdec,notlastdec)) 
+megmean$mean <- as.numeric(megmean$mean)
+megmean$gene_id <- rownames(megmean)
+
+# add genetype, genelength and intronN --------
+gene_length_type_intronN <- readRDS('./input/gene_length_type_intronN.rds')
+gene_length_type_intronN$gene_whole_length <- as.numeric(gene_length_type_intronN$gene_whole_length)
+colnames(gene_length_type_intronN)
+
+megmean <- inner_join(megmean, gene_length_type_intronN, by='gene_id')
+
+megmean$intronlength <- as.numeric(megmean$gene_whole_length-megmean$length)
+
+# plot all genes, detected vs not detected by last-seq--------------------------------------
+library(ggpubr)
+
+my_comparisons <- list( c("lastdec", "notlastdec"))
+
+# compare expression level distribution of all genes
+p <- megmean %>% ggplot(aes(x=type,y=log10(mean),color=type))+
+  #geom_density(linewidth=0.25)+
+  geom_boxplot(linewidth=0.25,outlier.shape = NA)+
+  stat_compare_means(comparisons =my_comparisons,size=1)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.position = c(0.8, 0.8),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.text = element_text(size=6),
+    axis.line.x = element_line(colour = "black", linewidth=0.25),
+    axis.line.y = element_line(colour = "black", linewidth=0.25),
+    axis.ticks.x = element_line(colour = "black", linewidth = 0.25),
+    axis.ticks.y = element_line(colour = "black", linewidth = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab(" ")+
+  ylab("Expression level (log10)")
+ggsave(filename = "detectedbylastseqornot_all_genes_expression.pdf",plot = p,width=45/2.5,height = 45,units = "mm", dpi = 300)
+
+
+# compare gene whole length distribution of all genes
+p <- megmean %>% ggplot(aes(x=type,y=log10(gene_whole_length),color=type))+
+  #geom_density(linewidth=0.25)+
+  geom_boxplot(linewidth=0.25,outlier.shape = NA)+
+  stat_compare_means(comparisons =my_comparisons,size=1)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.position = c(0.8, 0.8),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.text = element_text(size=6),
+    axis.line.x = element_line(colour = "black", linewidth=0.25),
+    axis.line.y = element_line(colour = "black", linewidth=0.25),
+    axis.ticks.x = element_line(colour = "black", linewidth = 0.25),
+    axis.ticks.y = element_line(colour = "black", linewidth = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab(" ")+
+  ylab("Gene length (log10)")
+ggsave(filename = "detectedbylastseqornot_length_whole_all_gene.pdf",plot = p,width=45/2.5,height = 45,units = "mm", dpi = 300)
+
+# compare gene intronic length distribution of all genes
+p <- megmean %>% ggplot(aes(x=type,y=log10(intronlength),color=type))+
+  #geom_density(linewidth=0.25)+
+  geom_boxplot(linewidth=0.25,outlier.shape = NA)+
+  stat_compare_means(comparisons =my_comparisons,size=1)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.position = c(0.8, 0.8),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.text = element_text(size=6),
+    axis.line.x = element_line(colour = "black", linewidth=0.25),
+    axis.line.y = element_line(colour = "black", linewidth=0.25),
+    axis.ticks.x = element_line(colour = "black", linewidth = 0.25),
+    axis.ticks.y = element_line(colour = "black", linewidth = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab(" ")+
+  ylab("Intron length (log10)")
+ggsave(filename = "detectedbylastseqornot_length_intron_allgene.pdf",plot = p,width=45/2.5,height = 45,units = "mm", dpi = 300)
+
+
+# compare intronN distribution of all genes
+p <-  megmean %>% ggplot(aes(x=type,y=log10(intronN),color=type))+
+  #geom_density(linewidth=0.25)+
+  geom_boxplot(linewidth=0.25,outlier.shape = NA)+
+  stat_compare_means(comparisons =my_comparisons,size=1)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.position = c(0.8, 0.8),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.text = element_text(size=6),
+    axis.line.x = element_line(colour = "black", linewidth=0.25),
+    axis.line.y = element_line(colour = "black", linewidth=0.25),
+    axis.ticks.x = element_line(colour = "black", linewidth = 0.25),
+    axis.ticks.y = element_line(colour = "black", linewidth = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab(" ")+
+  ylab("Intron #")
+ggsave(filename = "detectedbylastseqornot_intron#_all_genes.pdf",plot = p,width=45/2.5,height = 45,units = "mm", dpi = 300)
+
+# secondary structure of all genes, compare energy -------------------------------------------------
+# random sample 5% genes from both detected genes and from notlastdeteced genes
+
+#make this example reproducible
+set.seed(1)
+
+strat_sample <- megmean %>%
+  group_by(type) %>%
+  sample_frac(size=.05)
+table(strat_sample$type)
+
+strat_sample_both <- strat_sample %>% filter(type=='lastdec')
+strat_sample_onlycel <- strat_sample %>% filter(type=='notlastdec')
+
+geneID_both <- strat_sample_both$gene_id
+write.table(geneID_both,file = 'geneID_both.txt',quote = F, sep = '\t',row.names = F,col.names = F)
+
+geneID_onlycel <- strat_sample_onlycel$gene_id
+write.table(geneID_onlycel,file = 'geneID_onlycel.txt',quote = F, sep = '\t',row.names = F,col.names = F)
+
+
+by_both <- read.csv("./input/freeG_both.txt", header = F,col.names = 'free energy')
+by_both$type <- rep('by_both',545)
+by_CEL <- read.csv("./input/freeG_CELonly.txt", header = F,col.names = 'free energy')
+by_CEL$type <- rep('by_CEL',80)
+
+meg_both_CEL <- rbind(by_both,by_CEL)
+str(meg_both_CEL)
+
+my_comparisons <- list( c("by_CEL", "by_both"))
+
+p <- meg_both_CEL %>% ggplot(aes(x=type,y=free.energy/1000,color=type))+
+  #geom_density(linewidth=0.25)+
+  geom_boxplot(linewidth=0.25,outlier.shape = NA)+
+  stat_compare_means(comparisons =my_comparisons,size=1)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.position = c(0.8, 0.8),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.text = element_text(size=6),
+    axis.line.x = element_line(colour = "black", linewidth=0.25),
+    axis.line.y = element_line(colour = "black", linewidth=0.25),
+    axis.ticks.x = element_line(colour = "black", linewidth = 0.25),
+    axis.ticks.y = element_line(colour = "black", linewidth = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab(" ")+
+  ylab("Minimum free energy(x1000)")
+ggsave(filename = "detectedbylastseqornot_freeG_allgene.pdf",plot = p,width=45/2.5,height = 45,units = "mm", dpi = 300)
+```
+
+```{r mapping rate of CEL-seq , Fig.s5i}
+CEL_exon_intron <- read.delim("./input/CELSS.readspercell.txt",header = T)
+CEL_exon_intron <- CEL_exon_intron %>%
+  filter(RG  != 'bad')
+
+CEL_exon_intron <- CEL_exon_intron %>% pivot_wider(names_from = RG, values_from = N)
+CEL_exon_intron <-as.data.frame(CEL_exon_intron)
+rownames(CEL_exon_intron) <- CEL_exon_intron$type
+CEL_exon_intron$type <- NULL
+CEL_exon_intron <-as.data.frame(t(CEL_exon_intron)) 
+
+
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(mappedrate = 100*(1-Unmapped/rowSums(CEL_exon_intron)))
+
+mappablescale <- 1/(0.01*(CEL_exon_intron$mappedrate))
+
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(exonmapping = 100*(Exon*mappablescale/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(intronmapping = 100*(Intron*mappablescale/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(intergenicmapping = 100*(Intergenic*mappablescale/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(totalmapping = 100*(Ambiguity*mappablescale/rowSums(CEL_exon_intron)))
+
+CEL_exon_intronrate <- CEL_exon_intron[6:10]
+colnames(CEL_exon_intronrate) <- c("Exon","Intron","Intergenic","Ambiguity","Total")
+
+rowSums(CEL_exon_intron[1:5])
+
+##convert to long
+CEL_exon_intronrate <- CEL_exon_intronrate %>%
+  pivot_longer(cols=Exon:Total, names_to = 'Type',values_to='Rate')
+
+errorbarCEL_exon_intronrate <- data_summary(CEL_exon_intronrate,varname='Rate',groupnames='Type')
+errorbarCEL_exon_intronrate$Type <- factor(errorbarCEL_exon_intronrate$Type,levels = c('Total','Exon','Intron',"Intergenic",'Ambiguity'))
+
+#plot
+p <- ggplot(data=errorbarCEL_exon_intronrate, aes(x=Type, y=Rate)) +
+  geom_bar(stat="identity",fill='#f29696',width=0.8)+
+  geom_errorbar(aes(ymin=Rate-SEM, ymax=Rate+SEM), width=.25,size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 4),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab("")+
+  ylab("Mapping Rate (%)")+
+  scale_fill_brewer(palette="Paired")+
+  theme(legend.position='none')
+
+ggsave(filename = "CELss_Mapping_scaled.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+
 
