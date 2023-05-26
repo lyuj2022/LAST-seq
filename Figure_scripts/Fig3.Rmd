@@ -1,5 +1,5 @@
 ---
-title: "Fig4"
+title: "Fig3"
 author: "Lyu"
 date: "7/19/2022"
 output: html_document
@@ -8,6 +8,58 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(scales)
+```
+
+```{r noise vs mean Fig4a}
+LASTCV <- readRDS('averageCV_mean_1.rds')
+CELCV <- readRDS('averageCV_mean_cel.rds')
+SMARTCV <- readRDS('averageCV_mean_smart.rds')
+
+LASTCV$ID <- rownames(LASTCV)
+LASTCV <-  LASTCV%>%
+  filter(averagemean>0.5)
+
+CELCV$ID <- rownames(CELCV)
+CELCV <-  CELCV%>%
+  filter(averagemean>0.5)
+
+SMARTCV$ID <- rownames(SMARTCV)
+
+LASTCV %>% ggplot(aes(x=lastCV))+
+  geom_density()+
+  xlim(0,3)
+
+CELCV %>% ggplot(aes(x=celCV))+
+  geom_density()
+
+LAST_vs_CEL <- inner_join(LASTCV,CELCV,by='ID')
+
+LAST_vs_CEL_vs_SMART <- inner_join(LAST_vs_CEL,SMARTCV)
+
+colnames(LAST_vs_CEL) <- c('lastCV','lastMean','ID','celCV','celMean')
+
+LAST_vs_CEL_vs_SMARTLong <- LAST_vs_CEL_vs_SMART%>%
+  pivot_longer(cols = c('lastCV','celCV','smartCV'),names_to ='names', values_to='values')
+LAST_vs_CEL_vs_SMARTLong$names <- factor(LAST_vs_CEL_vs_SMARTLong$names,levels = c('lastCV','celCV','smartCV'))
+
+# plot technical noise of all methods---
+
+p <-  ggplot(LAST_vs_CEL_vs_SMARTLong,aes(x=values,color=names))+
+  geom_density(size=0.25)+
+  #geom_vline(data=LAST_vs_CEL_vs_SMARTLongMedian,aes(xintercept=Med, color=names),
+             #linetype="dashed",size=0.25)+
+ theme_man+
+   theme(legend.position = c(0.8, 0.8),
+         legend.key.size = unit(0.1, "cm"),
+         legend.key.width = unit(0.1, "cm"),
+         legend.text = element_text(size=6))+
+   #xlim(-0.2,0.2)+
+   ylab('density')+
+   xlab("technical noise (CV)")
+   #annotate(geom="text",x=0.2, y=4, label="WT",size=2)
+ 
+ ggsave(filename = "technical noise_all.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
+ 
 ```
 
 ```{r noise vs mean Fig4c}
@@ -208,12 +260,24 @@ p-value < 2.2e-16
 bfbs_AB <- readRDS('./input/bfbs_ABcompartment.rds')
 bfbs_AB <- bfbs_AB%>%group_by(AB)
 
+freA <- bfbs_AB %>% filter(AB == 'A')
+freB <- bfbs_AB %>% filter(AB == 'B')
+ks.test(freA$B_freqency,freB$B_freqency)
+
+# ----------
+Asymptotic two-sample Kolmogorov-Smirnov test
+
+data:  freA$B_freqency and freB$B_freqency
+D = 0.069318, p-value = 0.01075
+alternative hypothesis: two-sided
+# ----------
+
 ##frequncy AB
 frequency_meidan <- bfbs_AB%>%summarise(med=median(B_freqency))
 
 p <- bfbs_AB %>% ggplot(aes(x=B_freqency,color=AB))+
-  geom_density(size=0.25)+
-  scale_x_log10()+
+  geom_density(linewidth=0.25)+
+  #scale_x_log10()+
   #stat_compare_means()+
   geom_vline(data=frequency_meidan,aes(xintercept=med, color=AB),
              linetype="dashed")+
@@ -222,33 +286,30 @@ p <- bfbs_AB %>% ggplot(aes(x=B_freqency,color=AB))+
         legend.key.size = unit(0.1, "cm"),
         legend.key.width = unit(0.1, "cm"),
         legend.text = element_text(size=6))+
-  annotate(geom="text",x=0.1, y=1.5, label="p-value = 0.01075",size=2)+
-  ylab('density')+
-  xlab("bursting frequency")
-ggsave(filename = "frequency_AB_wt.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
-
-######## K-S test, test whether two datasets are from the same distribution
-daf <- bfbs_AB[,c(1,14)]
-
-data1 <- daf %>%
-  filter(AB=='A')
-
-data2 <- daf %>%
-  filter(AB=='B')
-
-ks.test(data1$B_freqency, data2$B_freqency)
-#p-value = 0.01075
-
-###############################################
-
-
+  annotate(geom="text",x=6, y=0.2, label="p-value = 0.01075",linewidth=2)+
+  ylab('Density')+
+  xlab("Burst frequency")+
+  xlim(0.1,7.5)+
+  ylim(0,0.35)
+ggsave(filename = "frequency_AB_wt_cut.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
 
 ##size AB
+# size 
+
+sizeA <- bfbs_AB %>% filter(AB == 'A')
+sizeB <- bfbs_AB %>% filter(AB == 'B')
+ks.test(sizeA$B_size,sizeB$B_size)
+# -----
+data:  sizeA$B_size and sizeB$B_size
+D = 0.048888, p-value = 0.1486
+alternative hypothesis: two-sided
+# -----
+
 size_meidan <- bfbs_AB%>%summarise(med=median(B_size))
 
 p <- bfbs_AB %>% ggplot(aes(x=B_size,color=AB))+
   geom_density(size=0.25)+
-  scale_x_log10()+
+  #scale_x_log10()+
   #stat_compare_means()+
   geom_vline(data=size_meidan,aes(xintercept=med, color=AB),
              linetype="dashed")+
@@ -257,23 +318,14 @@ p <- bfbs_AB %>% ggplot(aes(x=B_size,color=AB))+
         legend.key.size = unit(0.1, "cm"),
         legend.key.width = unit(0.1, "cm"),
         legend.text = element_text(size=6))+
-  annotate(geom="text",x=10, y=2, label="p-value = 0.1486",size=2)+
-  ylab('density')+
-  xlab("bursting size")
-ggsave(filename = "size_AB_wt.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
+  annotate(geom="text",x=6, y=0.75, label="p-value = 0.1486",size=2)+
+  ylab('Density')+
+  xlab("Burst size")+
+  xlim(0,7.5)+
+  ylim(0,0.9)
 
-######## K-S test, test whether two datasets are from the same distribution
-das <- bfbs_AB[,c(2,14)]
+ggsave(filename = "size_AB_wt_cut.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
 
-data1 <- das %>%
-  filter(AB=='A')
 
-data2 <- das %>%
-  filter(AB=='B')
-
-ks.test(data1$B_size, data2$B_size)
-#p-value = 0.1486
-#########################################################################################
 #########################################################################################
 ```
-
