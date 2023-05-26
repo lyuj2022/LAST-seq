@@ -14,7 +14,7 @@ library(tidyverse)
 library(scales)
 ```
 
-```{r define a function for calculating mean and SEM}
+```{r define a function to calculating mean and SEM}
 #+++++++++++++++++++++++++
 # Function to calculate the mean and the standard deviation
 # for each group
