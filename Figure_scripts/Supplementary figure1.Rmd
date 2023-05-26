@@ -1,0 +1,409 @@
+---
+title: "Fig1S"
+author: "Lyu"
+date: "6/28/2022"
+output: html_document
+---
+```{r load library}
+library(tidyverse)
+library(scales)
+```
+
+### simulate the impact of capture efficiency on sensitivity and technical noise
+```{r technical noise vs expression level, log scale}
+#use the really mRNA expression level, quantified by LASTseq, average of 10 single HEK293T
+TN <- readRDS('transcripts.rds')
+
+colnames(TN) <- 'transcripts'
+
+TN <- TN %>%
+  mutate(CV_0.10 = sqrt(0.9/(0.1*transcripts)))
+
+TN <- TN %>%
+  mutate(CV_0.20 = sqrt(0.8/(0.2*transcripts)))
+
+TN <- TN %>%
+  mutate(CV_0.40 = sqrt(0.6/(0.4*transcripts)))
+
+TNL <- TN %>%
+  pivot_longer(cols = c(2:4),names_to="capture_efficiency",values_to="CV")
+
+#random sample 2000 genes for plotting
+RN <- nrow(TNL)
+RS <- sample (RN, size=2000, replace =F)
+TNLR <- TNL[RS,]
+
+p <- TNLR %>% ggplot(aes(x=transcripts,y=CV,color=capture_efficiency))+
+  geom_point(size=0.25)+
+  geom_line(size=0.25)+
+  scale_x_log10(labels=label_number(accuracy = 0.1)) +
+  scale_y_log10() +
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x=element_text(size=6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_text( size = 5),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x=element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.9,0.8),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.text = element_text(size=5))+
+  #change x and y labels
+  xlab("transcript#")+  
+  ylab("technical noise")+
+  scale_color_discrete(labels=c("10%","20%","40%"))+
+  #annotate(geom="text",x=900, y=10, label="Capture efficiency",size=2)+
+  labs(color = "Capture efficiency")
+  
+ggsave(filename = "simulation_CV_0.1_0.2_0.4_log.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
+```
+
+```{r technical noise vs expression level, linear scale}
+TNL <- data.frame(transcript=c(10,20,50,100,120,150,200,250,300,500)) 
+
+TNL <- TNL %>%
+  mutate(CV_0.10 = sqrt(0.9/(0.1*transcript)))
+
+TNL <- TNL %>%
+  mutate(CV_0.20 = sqrt(0.8/(0.2*transcript)))
+
+TNL <- TNL %>%
+  mutate(CV_0.40 = sqrt(0.6/(0.4*transcript)))
+
+TNLL <- TNL %>%
+  pivot_longer(cols = c(2:4),names_to="capture_efficiency",values_to="CV")
+
+p <- TNLL %>% ggplot(aes(x=transcript,y=CV,color=capture_efficiency))+
+  geom_point(size=0.25)+
+  geom_line(size=0.25)+
+  #scale_x_log10(labels=label_number(accuracy = 0.1)) +
+  #scale_y_log10() +
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x=element_text(size=6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_text( size = 5),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x=element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.9,0.8),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.text = element_text(size=5))+
+  #change x and y labels
+  xlab("transcripts#")+  
+  ylab("technical noise")+
+  scale_color_discrete(labels=c("10%","20%","40%"))+
+  #annotate(geom="text",x=900, y=10, label="Capture efficiency",size=2)+
+  labs(color = "Capture efficiency")
+
+ggsave(filename = "simulation_CV_0.1_0.2_0.4_linear.pdf",plot = p,width=90,height = 45,units = "mm", dpi = 300)
+
+```
+
+
+```{r distinguish transcripts of 25 and 50 copies upon 10% CP}
+# capture efficiency=10%, transcripts=25
+size <- 25
+prob <- 0.10
+Y <- dbinom(0:size, size, prob)
+
+C20_T20 <- data.frame(c(0:size),Y)
+C20_T20$transcripts <- rep("25",26)
+
+# capture efficiency=10%, transcripts=50
+size <- 50
+prob <- 0.10
+Y <- dbinom(0:size, size, prob)
+C20_T40 <- data.frame(c(0:size),Y)
+C20_T40$transcripts <- rep("50",51)
+
+meg_0.10 <- rbind(C20_T20,C20_T40)
+
+p <- meg_0.10 %>% ggplot(aes(x=c.0.size.,y=Y,color=transcripts))+
+  geom_point(size=0.25)+
+  geom_line(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x=element_text(size=6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_text( size = 5),
+    legend.text = element_text(size=5),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.position=c(0.8,0.7),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x=element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    )+
+  #annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  annotate(geom="text",x=12, y=0.3, label="Capture efficiency = 10%",size=2)+
+  ylim(0,0.3)+
+  xlim(0,30)+
+  #change x and y labels
+  xlab("detected transcripts#")+  
+  ylab("probability")+
+  labs(color = "transcripts#")
+  #scale_color_discrete(labels=c("0.15", "0.22", "0.4","0.8"))
+ggsave(filename = "simulation_0.10.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
+```{r distinguish transcripts of 25 and 50 copies upon 20% CP}
+# capture efficiency=20%, transcripts=25
+size <- 25
+prob <- 0.20
+Y <- dbinom(0:size, size, prob)
+
+C20_T20 <- data.frame(c(0:size),Y)
+C20_T20$transcripts <- rep("25",26)
+
+# capture efficiency=20%, transcripts=50
+size <- 50
+prob <- 0.2
+Y <- dbinom(0:size, size, prob)
+C20_T40 <- data.frame(c(0:size),Y)
+C20_T40$transcripts <- rep("50",51)
+
+meg_0.20 <- rbind(C20_T20,C20_T40)
+
+p <- meg_0.20 %>% ggplot(aes(x=c.0.size.,y=Y,color=transcripts))+
+  geom_point(size=0.25)+
+  geom_line(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x=element_text(size=6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_text( size = 5),
+    legend.text = element_text(size=5),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.position=c(0.8,0.7),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x=element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7)
+    )+
+  annotate(geom="text",x=12, y=0.3, label="Capture efficiency = 20%",size=2)+
+  ylim(0,0.3)+
+  xlim(0,30)+
+  #change x and y labels
+  xlab("detected transcripts#")+  
+  ylab("probability")+
+  labs(color = "transcripts#")
+#scale_color_discrete(labels=c("0.15", "0.22", "0.4","0.8"))
+ggsave(filename = "simulation_0.2.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r distinguish transcripts of 25 and 50 copies upon 40% CP}
+# capture efficiency=40%, transcripts=25
+size <- 25
+prob <- 0.40
+Y <- dbinom(0:size, size, prob)
+
+C20_T20 <- data.frame(c(0:size),Y)
+C20_T20$transcripts <- rep("25",26)
+
+# capture efficiency=40%, transcripts=50
+size <- 50
+prob <- 0.4
+Y <- dbinom(0:size, size, prob)
+C20_T40 <- data.frame(c(0:size),Y)
+C20_T40$transcripts <- rep("50",51)
+
+meg_0.40 <- rbind(C20_T20,C20_T40)
+
+p <- meg_0.40 %>% ggplot(aes(x=c.0.size.,y=Y,color=transcripts))+
+  geom_point(size=0.25)+
+  geom_line(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x=element_text(size=6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_text( size = 5),
+    legend.text = element_text(size=5),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.position=c(0.8,0.7),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x=element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7)
+  )+
+  annotate(geom="text",x=12, y=0.3, label="Capture efficiency = 40%",size=2)+
+  ylim(0,0.3)+
+  xlim(0,30)+
+  #change x and y labels
+  xlab("detected transcripts#")+  
+  ylab("probability")+
+  labs(color = "transcripts#")
+#scale_color_discrete(labels=c("0.15", "0.22", "0.4","0.8"))
+ggsave(filename = "simulation_0.4.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r distinguish transcripts of 250 and 500 copies upon 10% CP}
+size <- 250
+prob <- 0.10
+Y <- dbinom(0:size, size, prob)
+
+C20_T20 <- data.frame(c(0:size),Y)
+C20_T20$transcripts <- rep("250",251)
+
+
+size <- 500
+prob <- 0.10
+Y <- dbinom(0:size, size, prob)
+C20_T40 <- data.frame(c(0:size),Y)
+C20_T40$transcripts <- rep("500",501)
+
+meg_0.10 <- rbind(C20_T20,C20_T40)
+
+p <- meg_0.10 %>% ggplot(aes(x=c.0.size.,y=Y,color=transcripts))+
+  geom_point(size=0.25)+
+  geom_line(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x=element_text(size=6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_text( size = 5),
+    legend.text = element_text(size=5),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.position=c(0.8,0.7),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x=element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7)
+  )+
+  annotate(geom="text",x=100, y=0.1, label="Capture efficiency = 10%",size=2)+
+  ylim(0,0.1)+
+  xlim(0,250)+
+  #change x and y labels
+  xlab("detected transcripts#")+  
+  ylab("probability")+
+  labs(color = "transcripts#")
+  
+#scale_color_discrete(labels=c("0.15", "0.22", "0.4","0.8"))
+ggsave(filename = "simulation_0.10_highcopy.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r distinguish transcripts of 250 and 500 copies upon 20% CP}
+size <- 250
+prob <- 0.20
+Y <- dbinom(0:size, size, prob)
+
+C20_T20 <- data.frame(c(0:size),Y)
+C20_T20$transcripts <- rep("250",251)
+
+size <- 500
+prob <- 0.20
+Y <- dbinom(0:size, size, prob)
+C20_T40 <- data.frame(c(0:size),Y)
+C20_T40$transcripts <- rep("500",501)
+
+meg_0.20 <- rbind(C20_T20,C20_T40)
+
+p <- meg_0.20 %>% ggplot(aes(x=c.0.size.,y=Y,color=transcripts))+
+  geom_point(size=0.25)+
+  geom_line(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x=element_text(size=6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_text( size = 5),
+    legend.text = element_text(size=5),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.position=c(0.8,0.7),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x=element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7)
+  )+
+  annotate(geom="text",x=100, y=0.1, label="Capture efficiency = 20%",size=2)+
+  ylim(0,0.1)+
+  xlim(0,250)+
+  #change x and y labels
+  xlab("detected transcripts#")+  
+  ylab("probability")+
+  labs(color = "transcripts#")
+
+#scale_color_discrete(labels=c("0.15", "0.22", "0.4","0.8"))
+ggsave(filename = "simulation_0.20_highcopy.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r distinguish transcripts of 250 and 500 copies upon 40% CP}
+size <- 250
+prob <- 0.4
+Y <- dbinom(0:size, size, prob)
+
+C20_T20 <- data.frame(c(0:size),Y)
+C20_T20$transcripts <- rep("250",251)
+
+size <- 500
+prob <- 0.4
+Y <- dbinom(0:size, size, prob)
+C20_T40 <- data.frame(c(0:size),Y)
+C20_T40$transcripts <- rep("500",501)
+
+meg_0.40 <- rbind(C20_T20,C20_T40)
+
+p <- meg_0.40 %>% ggplot(aes(x=c.0.size.,y=Y,color=transcripts))+
+  geom_point(size=0.25)+
+  geom_line(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x=element_text(size=6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_text( size = 5),
+    legend.text = element_text(size=5),
+    legend.key.size = unit(0.1, "cm"),
+    legend.key.width = unit(0.1, "cm"),
+    legend.position=c(0.8,0.7),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x=element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7)
+  )+
+  annotate(geom="text",x=100, y=0.1, label="Capture efficiency = 40%",size=2)+
+  ylim(0,0.1)+
+  xlim(0,250)+
+  xlab("detected transcripts")+  
+  ylab("probability")+
+  labs(color = "transcripts#")
+#scale_color_discrete(labels=c("0.15", "0.22", "0.4","0.8"))
+ggsave(filename = "simulation_0.4_highcopy.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
+
