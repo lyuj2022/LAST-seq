@@ -417,10 +417,149 @@ r2 <- r*r
 ```
 
 
+```{r mapping rate of SMART-seq Figs4f}
+library(tidyverse)
+CEL_exon_intron <- read.delim("./SMARTv4.readspercell.txt",header = T)
+CEL_exon_intron <- CEL_exon_intron %>%
+  filter(RG  != 'bad')
 
+CEL_exon_intron <- CEL_exon_intron %>% pivot_wider(names_from = RG, values_from = N)
+CEL_exon_intron <-as.data.frame(CEL_exon_intron)
+rownames(CEL_exon_intron) <- CEL_exon_intron$type
+CEL_exon_intron$type <- NULL
+CEL_exon_intron <-as.data.frame(t(CEL_exon_intron)) 
 
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(exonmapping = 100*(Exon/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(intronmapping = 100*(Intron/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(intergenicmapping = 100*(Intergenic/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(totalmapping = 100*(Ambiguity/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(mappedrate = 100*(1-Unmapped/rowSums(CEL_exon_intron)))
 
+CEL_exon_intronrate <- CEL_exon_intron[6:10]
+colnames(CEL_exon_intronrate) <- c("Exon","Intron","Intergenic","Ambiguity","Total")
 
+rowSums(CEL_exon_intron[1:5])
+
+##convert to long
+CEL_exon_intronrate <- CEL_exon_intronrate %>%
+  pivot_longer(cols=Exon:Total, names_to = 'Type',values_to='Rate')
+
+errorbarCEL_exon_intronrate <- data_summary(CEL_exon_intronrate,varname='Rate',groupnames='Type')
+errorbarCEL_exon_intronrate$Type <- factor(errorbarCEL_exon_intronrate$Type,levels = c('Total','Exon','Intron',"Intergenic",'Ambiguity'))
+
+#plot
+p <- ggplot(data=errorbarCEL_exon_intronrate, aes(x=Type, y=Rate)) +
+  geom_bar(stat="identity",fill='#f29696',width=0.8)+
+  geom_errorbar(aes(ymin=Rate-SEM, ymax=Rate+SEM), width=.25,size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 4),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab("")+
+  ylab("Mapping Rate (%)")+
+  scale_fill_brewer(palette="Paired")+
+  theme(legend.position='none')
+
+ggsave(filename = "SMARTseq_Mapping.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r LAST-seq vs SMART-seq reads SF 4g}
+# load last-seq dataset
+last_read1 <- as.data.frame(table_1000K_reads)
+last_read1$ID <- rownames(last_read1)
+lastmeadreads <- as.data.frame(rowSums(last_read1[1:10])/10)
+colnames(lastmeadreads) <- 'lastmeadreads'
+lastmeadreads$ID <- rownames(lastmeadreads)
+
+# load smart-seq dataset
+AllCounts <- readRDS("SMARTv4.dgecounts.rds")
+downsample_1000K_ex <- AllCounts$readcount$ex$downsampling$downsampled_1000000
+table_1000K_ex <- as.matrix(downsample_1000K_ex)
+table_1000K_ex <- table_1000K_ex[!grepl("^ERCC-",rownames(table_1000K_ex)),]
+
+SMARTfull<- table_1000K_ex
+meanreadssmart <-as.data.frame(rowSums(SMARTfull)/9) 
+colnames(meanreadssmart) <- 'meanreadssmart'
+meanreadssmart$ID <- rownames(meanreadssmart)
+
+last_smart_reads <- inner_join(lastmeadreads,meanreadssmart,by='ID')
+#last_smart_reads <- last_smart_reads %>%
+  #filter(lastmeadreads>1&meanreadssmart>1)
+
+#random sample 2000 genes for plotting
+RN <- nrow(last_smart_reads)
+RS <- sample (RN, size=2000, replace =F)
+last_smart_readsR <- last_smart_reads[RS,]
+
+p <-last_smart_readsR%>% ggplot(aes(x=meanreadssmart, y=lastmeadreads))+
+  geom_point(size=0.1)+
+  theme_man+
+  #geom_abline(intercept=0, slope=1,size=0.25, color='red')+
+  scale_x_log10(limits= c(1, 30000)) +
+  scale_y_log10(limits= c(1, 30000)) +
+  annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+  annotate(geom="text",x=5, y=30000, label="PCC=0.644",size=2)+
+  xlab("SMART-seq read numbers")+  
+  ylab("LAST-seq read numbers")
+
+cor(log10(last_smart_reads$lastmeadreads),log10(last_smart_reads$meanreadssmart),method = 'pearson')
+ggsave(filename = "LAST_SMARTFULL_reads_genes.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+```{r LAST-seq vs SMART-seq ERCC detection SF 4i}
+LAST_ERCC <- read.table("./input/LAST_ERCC_smooth.csv",sep = ",")
+colnames(LAST_ERCC) <- c("copy_number","detection_rate")
+LAST_ERCC$type <- rep("LAST_ERCC",26)
+
+SMART_ERCC <- read.table("./input/SMART_ERCC_smooth.csv",sep = ",")
+colnames(SMART_ERCC) <- c("copy_number","detection_rate")
+SMART_ERCC$type <- rep("SMART_ERCC",26)
+
+megsmart_last <- rbind(LAST_ERCC,SMART_ERCC)
+megsmart_last <- megsmart_last %>%
+  filter(copy_number > 5)
+
+p <- megsmart_last%>%ggplot(aes(x=copy_number,y=detection_rate,color=type))+
+  geom_smooth(size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 6),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    #legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7),
+    legend.position = c(0.8, 0.2),
+    legend.key.size = unit(0.05, "cm"),
+    legend.key.width = unit(0.05, "cm"),
+    legend.text = element_text(size=5))+
+  xlab("spike-ins copy#")+
+  ylab("detection rate of ERCC spike-in")+
+  scale_color_discrete(labels=c("LASTseq","SMARTseq"))
+  
+
+ggsave(filename = "LAST_SMART_ERCC_CP.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+```
 
 
 
