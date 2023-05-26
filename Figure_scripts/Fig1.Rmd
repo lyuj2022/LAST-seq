@@ -14,7 +14,7 @@ library(tidyverse)
 library(scales)
 ```
 
-```{r define a function to calculating mean and SEM}
+```{r define a function to calculate mean and SEM}
 #+++++++++++++++++++++++++
 # Function to calculate the mean and the standard deviation
 # for each group
@@ -36,11 +36,79 @@ data_summary <- function(data, varname, groupnames){
   return(data_sum)
 }
 ```
+```{r reads mapping, Fig1b}
+CEL_exon_intron <- read.delim("./input/lastsp.readspercell.txt",header = T)
+CEL_exon_intron <- CEL_exon_intron %>%
+  filter(RG  != 'bad')
 
-```{r reproducibility on 15pg RNA average Fig1c}
-RNA <- readRDS("./input/LAST_on_RNA.rds")
+CEL_exon_intron <- CEL_exon_intron %>% pivot_wider(names_from = RG, values_from = N)
+CEL_exon_intron <-as.data.frame(CEL_exon_intron)
+rownames(CEL_exon_intron) <- CEL_exon_intron$type
+CEL_exon_intron$type <- NULL
+CEL_exon_intron <-as.data.frame(t(CEL_exon_intron)) 
 
-RNA <-as.data.frame(RNA)
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(mappedrate = 100*(1-Unmapped/rowSums(CEL_exon_intron)))
+
+mappablescale <- 1/(0.01*(CEL_exon_intron$mappedrate))
+
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(exonmapping = 100*(Exon*mappablescale/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(intronmapping = 100*(Intron*mappablescale/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(intergenicmapping = 100*(Intergenic*mappablescale/rowSums(CEL_exon_intron)))
+CEL_exon_intron <- CEL_exon_intron %>%
+  mutate(totalmapping = 100*(Ambiguity*mappablescale/rowSums(CEL_exon_intron)))
+
+CEL_exon_intronrate <- CEL_exon_intron[6:10]
+colnames(CEL_exon_intronrate) <- c("Total","Exon","Intron","Intergenic","Ambiguity")
+
+rowSums(CEL_exon_intron[1:5])
+
+##convert to long
+CEL_exon_intronrate <- CEL_exon_intronrate %>%
+  pivot_longer(cols=Total:Ambiguity, names_to = 'Type',values_to='Rate')
+
+errorbarCEL_exon_intronrate <- data_summary(CEL_exon_intronrate,varname='Rate',groupnames='Type')
+errorbarCEL_exon_intronrate$Type <- factor(errorbarCEL_exon_intronrate$Type,levels = c('Total','Exon','Intron',"Intergenic",'Ambiguity'))
+
+#plot
+p <- ggplot(data=errorbarCEL_exon_intronrate, aes(x=Type, y=Rate)) +
+  geom_bar(stat="identity",fill='#f29696',width=0.8)+
+  geom_errorbar(aes(ymin=Rate-SEM, ymax=Rate+SEM), width=.25,size=0.25)+
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size=6),
+    axis.text.x = element_text(size = 4),
+    axis.title = element_text(colour='black', size=7),
+    legend.title=element_blank(),
+    legend.key=element_blank(),
+    axis.line.x = element_line(colour = "black", size=0.25),
+    axis.line.y = element_line(colour = "black", size=0.25),
+    axis.ticks.x = element_line(colour = "black", size = 0.25),
+    axis.ticks.y = element_line(colour = "black", size = 0.25),
+    strip.background=element_blank(),
+    strip.text=element_text(size=7))+
+  xlab("")+
+  ylab("Mapping Rate (%)")+
+  scale_fill_brewer(palette="Paired")+
+  theme(legend.position='none')
+
+ggsave(filename = "lastsp_Mapping_scaled.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+```
+
+
+```{r reproducibility on 15pg RNA average Fig1c, Figs4a/b/e}
+# downsample 1M reads and count UMIs ----------
+AllCounts <- readRDS("LASTRNA.dgecounts.rds")
+downsample_1000K_ex <- AllCounts$umicount$ex$downsampling$downsampled_1000000
+table_1000K_ex <- as.matrix(downsample_1000K_ex)
+
+# Fig1c -------
+ERCCrm <- table_1000K_ex[!grepl("^ERCC-",rownames(table_1000K_ex)),]
+ERCCrm[is.na(ERCCrm)] <- 0
+RNA <-as.data.frame(ERCCrm)
 
 #random sample 2000 genes for plotting
 RN <- nrow(RNA)
@@ -62,73 +130,110 @@ p <- RNAS%>% ggplot(aes(x=ACTGTC, y= ATCCAG))+
   ylab("Sample2 UMI numbers")
 cor(log1p(RNA$ACTGTC),log1p(RNA$ATCCAG),method = 'pearson')
 ggsave(filename = "reproducibility.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+# Figs4b -----------
+library(corrplot)
+library(scater) # use calculateCPM()
+
+cpm <- calculateCPM(ERCCrm)
+cpmF <-as.data.frame(cpm[rowSums(cpm>0)>2,]) 
+logmat <- log1p(cpmF)
+M <- cor(logmat)
+corrplot(M, method = 'number')
+
+# Figs4a -----------
+twolysate <- ERCCrm[,1:2]
+colSums(twolysate>0)
+twolysateover <-  twolysate[rowSums(twolysate>0)>1,] #8281
+
+library(VennDiagram)
+
+# move to new plotting page
+grid.newpage()
+
+# create pairwise Venn diagram
+p <- draw.pairwise.venn(area1 = 10132,                        # Create pairwise venn diagram
+                   area2 = 10210,
+                   cross.area = 8281,
+                   lwd = 1,
+                   cex = .6)
+
+ggsave(filename = "Venn.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
+
+# Figs4e -----------
+# retrieve UMI
+downsample_1000K_ex <- AllCounts$umicount$ex$downsampling$downsampled_1000000
+table_1000K_ex <- as.matrix(downsample_1000K_ex)
+# retrieve reads
+R_downsample_1000K_ex <- AllCounts$readcount$exon$downsampling$downsampled_1000000
+R_table_1000K_ex <- as.matrix(R_downsample_1000K_ex)
+
+### calculate cv and mean 
+# make cv function
+cv <-  function(x){
+  Cv = sd(x) / mean(x)
+  return(Cv)
+}
+
+# calculate mean of UMI
+table_1000K_ex$UMImean <- unlist(apply(table_1000K_ex,1,mean))
+# calculate mean of UMIcv
+table_1000K_ex$UMIcv <- unlist(apply(table_1000K_ex[1:10],1,cv))
+
+# calculate mean of reads
+table_1000K_ex_R$readmean <- unlist(apply(table_1000K_ex_R,1,mean))
+
+# calculate mean of readcv
+table_1000K_ex_R$readcv <- unlist(apply(table_1000K_ex_R[1:10],1,cv))
+
+# check ID
+identical(rownames(table_1000K_ex),rownames(table_1000K_ex_R))
+
+# meger UMImean, UMIcv and readcv
+ merg <- cbind(table_1000K_ex[c(11,12)],table_1000K_ex_R[12])
+
+# convert to long format
+ 
+ mergl <- merg %>%
+   pivot_longer(cols = c("UMIcv","readcv"), names_to = "name",values_to = "value")
+
+ mergl <-  mergl %>%
+   filter(UMImean >1 )
+ 
+ p <- mergl %>% ggplot(aes(x=log10(UMImean),y=value,color=name))+
+   geom_point(size=0.1,alpha = .5)+
+   #geom_smooth(formula = y ~ x,method = "loess", alpha = .15, aes(fill = name),show.legend = F)+
+   scale_color_manual(labels = c("Reads", "UMIs"),values=c("black","red"))+
+   #scale_fill_manual(values = c("blue","red"))+
+   theme_classic() +
+   theme(
+     axis.text.y = element_text(size=6),
+     axis.text.x = element_text(size = 6),
+     axis.title = element_text(colour='black', size=7),
+     legend.title=element_blank(),
+     legend.key=element_blank(),
+     axis.line.x = element_line(colour = "black", size=0.25),
+     axis.line.y = element_line(colour = "black", size=0.25),
+     axis.ticks.x = element_line(colour = "black", size = 0.25),
+     axis.ticks.y = element_line(colour = "black", size = 0.25),
+     strip.background=element_blank(),
+     strip.text=element_text(size=7))+
+   xlab("number of transcripts (log10)")+
+ ylab("CV")
+
+ ggsave(filename = "CV_mean_.pdf",plot = p,width=45*2,height = 45,units = "mm", dpi = 300)
 ```
 
-```{r reads mapping, Fig1d}
-lastsm <- read.csv("./input/lastsm.readspercell.txt",sep = "\t",header = T)
+```{r reads vs UMI, ERCC Fig1d, take the dataset from e}
+ERCCextraread <- table_1000K_reads[grepl("^ERCC-",rownames(table_1000K_reads)),]
+ERCCextraUMI <- table_1000K_ex[grepl("^ERCC-",rownames(table_1000K_ex)),]
+erccmeadreads <- rowSums(ERCCextraread)/10
+erccmeanumi <- rowSums(ERCCextraUMI)/10
 
-lastsm <- lastsm %>% pivot_wider(names_from = RG, values_from = N)
-lastsm$bad <- NULL
-
-lastsp <- read.csv("./input/lastsp.readspercell.txt",sep = "\t",header = T)
-
-lastsp <- lastsp %>% pivot_wider(names_from = RG, values_from = N)
-lastsp$bad <- NULL
-
-lastreadsmap <- inner_join(lastsm,lastsp,by="type")
-lastreadsmap <-as.data.frame(lastreadsmap)
-rownames(lastreadsmap) <- lastreadsmap$type
-lastreadsmap$type <- NULL
-lastreadsmap <-as.data.frame(t(lastreadsmap)) 
-
-lastreadsmap <- lastreadsmap %>%
-  mutate(exonmapping = 100*(Exon/rowSums(lastreadsmap)))
-lastreadsmap <- lastreadsmap %>%
-  mutate(intronmapping = 100*(Intron/rowSums(lastreadsmap)))
-lastreadsmap <- lastreadsmap %>%
-  mutate(intergenicmapping = 100*(Intergenic/rowSums(lastreadsmap)))
-lastreadsmap <- lastreadsmap %>%
-  mutate(ambiguitymapping = 100*(Ambiguity/rowSums(lastreadsmap)))
-lastreadsmap <- lastreadsmap %>%
-  mutate(totalmapping = 100*(1-Unmapped/rowSums(lastreadsmap)))
-
-lastreadsmaprate <- lastreadsmap[6:10]
-colnames(lastreadsmaprate) <- c("Exon","Intron","Intergenic","Ambiguity","Total")
-
-##convert to long
-lastreadsmaprate <- lastreadsmaprate %>%
-  pivot_longer(cols=Exon:Total, names_to = 'Type',values_to='Rate')
-#calculate mean and SEM
-errorbar <- data_summary(lastreadsmaprate,varname='Rate',groupnames='Type')
-errorbar$Type <- factor(errorbar$Type,levels = c('Total','Exon','Intron',"Intergenic",'Ambiguity'))
-
-#plot
-p <- ggplot(data=errorbar, aes(x=Type, y=Rate)) +
-  geom_bar(stat="identity",fill='#f29696',width=0.8)+
-  geom_errorbar(aes(ymin=Rate-SEM, ymax=Rate+SEM), width=.25,size=0.25)+
-  theme_classic() +
-  theme(
-    axis.text.y = element_text(size=6),
-    axis.text.x = element_text(size = 4),
-    axis.title = element_text(colour='black', size=7),
-    legend.title=element_blank(),
-    legend.key=element_blank(),
-    axis.line.x = element_line(colour = "black", size=0.25),
-    axis.line.y = element_line(colour = "black", size=0.25),
-    axis.ticks.x = element_line(colour = "black", size = 0.25),
-    axis.ticks.y = element_line(colour = "black", size = 0.25),
-    strip.background=element_blank(),
-    strip.text=element_text(size=7))+
-  xlab("")+
-  ylab("Mapping Rate (%)")+
-  scale_fill_brewer(palette="Paired")+
-  theme(legend.position='none')
+erccreads_UMIs <-as.data.frame(cbind(erccmeadreads,erccmeanumi)) 
+erccreads_UMIs <- erccreads_UMIs %>% 
+  filter(erccmeanumi>1)
   
-ggsave(filename = "LAST_Mapping.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
-```
-
-```{r reads vs UMI, ERCC Fig1e}
-erccreads_UMIs <- readRDS('./input/erccreads_UMIs.rds')
 p <-erccreads_UMIs%>% ggplot(aes(x=erccmeadreads, y= erccmeanumi))+
   geom_point(size=0.1)+
   #remove background
@@ -146,8 +251,26 @@ cor(log10(erccreads_UMIs$erccmeadreads),log10(erccreads_UMIs$erccmeanumi),method
 ggsave(filename = "reads_vs_UMI_ercc.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
 ```
 
-```{r reads vs UMI last-seq, downsample 1M Fig1f }
-reads_UMIs <- readRDS('./input/reads_UMIs_LAST.rds')
+```{r reads vs UMI last-seq, downsample 1M Fig1e }
+AllCounts <- readRDS("./input/lastsp.dgecounts.rds")
+downsample_1000K_reads <- AllCounts$readcount$ex$downsampling$downsampled_1000000
+table_1000K_reads <- as.matrix(downsample_1000K_reads)
+
+downsample_1000K_ex <- AllCounts$umicount$ex$downsampling$downsampled_1000000
+table_1000K_ex <- as.matrix(downsample_1000K_ex)
+
+table_1000K_reads <- table_1000K_reads[!grepl("^ERCC-",rownames(table_1000K_reads)), ]
+table_1000K_ex <- table_1000K_ex[!grepl("^ERCC-",rownames(table_1000K_ex)), ]
+
+meadreads <- rowSums(table_1000K_reads)/10
+
+meanumi <- rowSums(table_1000K_ex)/10
+
+reads_UMIs <-as.data.frame(cbind(meadreads,meanumi)) 
+reads_UMIs <- reads_UMIs %>% 
+  filter(meanumi>1 )
+reads_UMIs <- reads_UMIs %>% 
+  mutate(readsperUMI = meadreads/meanumi)
 
 #random sample 2000 genes for plotting
 RN <- nrow(reads_UMIs)
@@ -171,8 +294,20 @@ cor(log10(reads_UMIs$meadreads),log10(reads_UMIs$meanumi),method = 'pearson')
 ggsave(filename = "reads_vs_UMI_genes.pdf",plot = p,width=45,height = 45,units = "mm", dpi = 300)
 ```
 
-```{r ERCC reads vs molarity Fig1g}
-ERCC_RF <- readRDS("./input/ERCC_spike_reads.rds")
+```{r ERCC reads vs molarity Fig1f}
+AllCounts <- readRDS("./input/lastsp.dgecounts.rds")
+downsample_1000K_ex_R <- AllCounts$readcount$exon$downsampling$downsampled_1000000
+table_1000K_ex_R <- as.matrix(downsample_1000K_ex_R)
+
+ERCC_R <-as.data.frame(table_1000K_ex_R[grepl("^ERCC-",rownames(table_1000K_ex_R)),]) 
+ERCC_R$ID <- rownames(ERCC_R)
+
+ERCC <- read.csv("ERCC.csv", header = F) # downloaded from Invitrogen 
+ERCC_R <- inner_join(ERCC_R,ERCC)
+
+ERCC_R$M <- rowSums(ERCC_R[1:10])/10
+ERCC_RF <- ERCC_R%>%
+  filter(mnum>1)
 
 p <- ERCC_RF %>% ggplot(aes(x=mnum))+
   geom_point(aes(y=M),size=0.35)+
@@ -200,10 +335,65 @@ ggsave(filename = "Acuracy_10_average_reads.pdf",plot = p,width=45,height = 45,u
 
 cor(log(ERCC_RF$M),log(ERCC_RF$mnum),method = "pearson")
 0.9251367*0.9251367
+
+#########calculate all R^2 ------------
+P1 <- cor(log1p(ERCC_RF$ACTGTC),log1p(ERCC_RF$mnum),method = "pearson")
+r1 <- P1*P1
+
+P2 <- cor(log1p(ERCC_RF$ATCCAG),log1p(ERCC_RF$mnum),method = "pearson")
+r2 <- P2*P2
+
+P3 <- cor(log1p(ERCC_RF$CAGTCT),log1p(ERCC_RF$mnum),method = "pearson")
+r3 <- P3*P3
+
+P4 <- cor(log1p(ERCC_RF$CATTGG),log1p(ERCC_RF$mnum),method = "pearson")
+r4 <- P4*P4
+
+P5 <- cor(log1p(ERCC_RF$CGAAGA),log1p(ERCC_RF$mnum),method = "pearson")
+r5 <- P5*P5
+
+P6 <- cor(log1p(ERCC_RF$GGAGAA),log1p(ERCC_RF$mnum),method = "pearson")
+r6 <- P6*P6
+
+P7 <- cor(log1p(ERCC_RF$GTATCC),log1p(ERCC_RF$mnum),method = "pearson")
+r7 <- P7*P7
+
+P8 <- cor(log1p(ERCC_RF$TCCAGA),log1p(ERCC_RF$mnum),method = "pearson")
+r8 <- P8*P8
+
+P9 <- cor(log1p(ERCC_RF$TCGACT),log1p(ERCC_RF$mnum),method = "pearson")
+r9 <- P9*P9
+
+P10 <- cor(log1p(ERCC_RF$TTGCTG),log1p(ERCC_RF$mnum),method = "pearson")
+r10 <- P10*P10
+
+totalr <- as.data.frame(c(r1,r2,r3,r4,r5,r6,r7,r8,r9,r10))
 ```
 
-```{r compute the accuracy by ERCC quantification Fig1h}
-ERCC_spike <- readRDS("./input/10_average_ERCC_spikes.rds")
+```{r compute the accuracy by ERCC quantification_UMI Fig1g}
+AllCounts <- readRDS("lastsp.dgecounts.rds")
+
+downsample_1M <- AllCounts$umicount$ex$downsampling$downsampled_1000000
+table_1M_ex <- as.matrix(downsample_1M)
+
+ERCC <- read.csv("ERCC.csv", header = F)
+
+spike_ins <- table_1M_ex[rownames(table_1M_ex) %in% ERCC$V1,]
+spike_ins_t <- as.data.frame(spike_ins)
+spike_ins_t$ID <- rownames(spike_ins_t)
+
+spike_mn <- ERCC[ERCC$V1 %in% spike_ins_t$ID,]
+colnames(spike_mn) <- c("ID","mnum")
+
+spikes <- merge(spike_ins_t,spike_mn, by= "ID")
+spikes[is.na(spikes)] <- 0
+spikes$meanspikes <- rowSums(spikes[2:11],na.rm = T)/10
+
+spikes <- spikes %>%
+  filter(mnum > 1)
+
+ERCC_spike <- spikes %>% 
+  mutate(logMN = log10(mnum), logUMI = log10(meanspikes))
 
 p <- ERCC_spike%>%ggplot(aes(x=mnum))+
   geom_point(aes(y=meanspikes),size=0.35)+
@@ -212,7 +402,7 @@ p <- ERCC_spike%>%ggplot(aes(x=mnum))+
   scale_x_log10() +
   scale_y_log10(labels=comma) +
   annotation_logticks(sides = "bl", size=0.15, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
-  annotate(geom="text",x=10, y=1000, label="R^2=0.86",size=2)+
+  annotate(geom="text",x=10, y=1000, label="R^2=0.863",size=2)+
   xlab("Spike-ins copy#")+  
   ylab("UMI counts")
 
